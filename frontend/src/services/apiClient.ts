@@ -20,8 +20,8 @@ const apiClient: AxiosInstance = axios.create({
 // リクエストインターセプター
 apiClient.interceptors.request.use(
   (config: AxiosRequestConfig) => {
-    // 認証トークンがある場合はヘッダーに追加（Step 21で実装予定）
-    const token = localStorage.getItem('auth_token');
+    // 認証トークンがある場合はヘッダーに追加（Phase 21認証統合）
+    const token = localStorage.getItem('iroas_boss_access_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -60,8 +60,12 @@ apiClient.interceptors.response.use(
           break;
         case 401:
           console.error('[API Error] Unauthorized');
-          // 認証エラーの場合はログイン画面へリダイレクト（Step 21で実装予定）
-          // window.location.href = '/login';
+          // 認証エラーの場合はトークンクリアしてログイン画面へリダイレクト
+          localStorage.removeItem('iroas_boss_access_token');
+          localStorage.removeItem('iroas_boss_refresh_token');
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
           break;
         case 403:
           console.error('[API Error] Forbidden:', data.detail || data.message);

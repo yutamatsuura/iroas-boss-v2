@@ -28,8 +28,8 @@ import {
   Settings,
   Storage,
   Notifications,
-  ExitToApp,
 } from '@mui/icons-material';
+import UserMenu from '@/components/auth/UserMenu';
 import { navigationMenuItems } from '@/router/routes';
 
 // アイコンマッピング
@@ -201,20 +201,8 @@ const MainLayout: React.FC = () => {
               </Badge>
             </IconButton>
             
-            {/* ユーザー情報（Step 21で認証実装後に更新） */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-              <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-                管
-              </Avatar>
-              <Typography variant="body2" sx={{ display: { xs: 'none', md: 'block' } }}>
-                管理者
-              </Typography>
-            </Box>
-            
-            {/* ログアウトボタン（Step 21で実装） */}
-            <IconButton color="inherit" sx={{ ml: 1 }}>
-              <ExitToApp />
-            </IconButton>
+            {/* ユーザーメニュー（認証機能統合） */}
+            <UserMenu />
           </Box>
         </Toolbar>
       </AppBar>

@@ -9,7 +9,11 @@ import Payouts from '@/pages/Payouts';
 import Activity from '@/pages/Activity';
 import Settings from '@/pages/Settings';
 import DataManagement from '@/pages/DataManagement';
+import Login from '@/pages/Login';
+import Profile from '@/pages/Profile';
 import NotFound from '@/pages/NotFound';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { UserRole } from '@/contexts/AuthContext';
 
 /**
  * ルート定義
@@ -17,9 +21,20 @@ import NotFound from '@/pages/NotFound';
  */
 
 export const routes: RouteObject[] = [
+  // 認証不要ルート
+  {
+    path: '/login',
+    element: <Login />, // ログインページ
+  },
+  
+  // 認証必須メインアプリケーション
   {
     path: '/',
-    element: <MainLayout />,
+    element: (
+      <ProtectedRoute>
+        <MainLayout />
+      </ProtectedRoute>
+    ),
     children: [
       {
         index: true,
@@ -29,46 +44,95 @@ export const routes: RouteObject[] = [
         path: 'dashboard',
         element: <Dashboard />, // P-001: ダッシュボード
       },
+      
+      // プロフィール設定
+      {
+        path: 'profile',
+        element: <Profile />,
+      },
+      
+      // 会員管理（MLM_MANAGER以上）
       {
         path: 'members',
-        children: [
-          {
-            index: true,
-            element: <Members />, // P-002: 会員管理
-          },
-          {
-            path: ':id',
-            element: <Members />, // 会員詳細（P-002内）
-          },
-        ],
+        element: (
+          <ProtectedRoute requiredPermissions={['member.view']}>
+            <Members />
+          </ProtectedRoute>
+        ),
       },
+      {
+        path: 'members/:id',
+        element: (
+          <ProtectedRoute requiredPermissions={['member.view']}>
+            <Members />
+          </ProtectedRoute>
+        ),
+      },
+      
+      // 組織図（MLM_MANAGER以上）
       {
         path: 'organization',
-        element: <Organization />, // P-003: 組織図ビューア
+        element: (
+          <ProtectedRoute requiredPermissions={['organization.view']}>
+            <Organization />
+          </ProtectedRoute>
+        ),
       },
+      
+      // 決済管理（MLM_MANAGER以上）
       {
         path: 'payments',
-        element: <Payments />, // P-004: 決済管理
+        element: (
+          <ProtectedRoute requiredPermissions={['payment.view']}>
+            <Payments />
+          </ProtectedRoute>
+        ),
       },
+      
+      // 報酬計算（MLM_MANAGER以上）
       {
         path: 'rewards',
-        element: <Rewards />, // P-005: 報酬計算
+        element: (
+          <ProtectedRoute requiredPermissions={['reward.view']}>
+            <Rewards />
+          </ProtectedRoute>
+        ),
       },
+      
+      // 支払管理（MLM_MANAGER以上）
       {
         path: 'payouts',
-        element: <Payouts />, // P-006: 報酬支払管理
+        element: (
+          <ProtectedRoute requiredPermissions={['payout.view']}>
+            <Payouts />
+          </ProtectedRoute>
+        ),
       },
+      
+      // アクティビティログ（管理者以上）
       {
         path: 'activity',
-        element: <Activity />, // P-007: アクティビティログ
+        element: (
+          <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MLM_MANAGER]}>
+            <Activity />
+          </ProtectedRoute>
+        ),
       },
+      
+      // システム設定（全ユーザー閲覧可能）
       {
         path: 'settings',
         element: <Settings />, // P-008: マスタ設定
       },
+      
+      // データ管理（管理者以上）
       {
         path: 'data',
-        element: <DataManagement />, // P-009: データ入出力
+        element: (
+          <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ADMIN]}>
+            <DataManagement />
+          </ProtectedRoute>
+        ),
       },
     ],
   },

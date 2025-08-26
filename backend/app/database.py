@@ -12,18 +12,26 @@ from sqlalchemy.pool import StaticPool
 import os
 from typing import Generator
 
-# 環境変数からデータベース接続情報を取得
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5432/iroas_boss_v2")
+# 環境変数からデータベース接続情報を取得（開発時はSQLiteを使用）
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./iroas_boss_v2.db")
 
 # SQLAlchemy エンジン作成
-engine = create_engine(
-    DATABASE_URL,
-    echo=os.getenv("SQL_ECHO", "false").lower() == "true",  # SQL出力設定
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,  # 接続確認
-    pool_recycle=3600,   # 1時間で接続をリサイクル
-)
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(
+        DATABASE_URL,
+        echo=os.getenv("SQL_ECHO", "false").lower() == "true",
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False}
+    )
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        echo=os.getenv("SQL_ECHO", "false").lower() == "true",  # SQL出力設定
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,  # 接続確認
+        pool_recycle=3600,   # 1時間で接続をリサイクル
+    )
 
 # セッション設定
 SessionLocal = sessionmaker(
