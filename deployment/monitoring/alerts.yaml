@@ -1,0 +1,381 @@
+# IROAS BOSS V2 - アラート設定
+# Google Cloud Monitoring アラート設定
+
+# ===================
+# 通知チャネル設定
+# ===================
+
+notification_channels:
+  # Slack通知
+  slack_critical:
+    type: slack
+    webhook_url: "${SLACK_WEBHOOK_CRITICAL}"
+    channel: "#iroas-alerts-critical"
+    
+  slack_warning:
+    type: slack
+    webhook_url: "${SLACK_WEBHOOK_WARNING}"
+    channel: "#iroas-alerts-warning"
+    
+  # メール通知
+  email_admin:
+    type: email
+    addresses:
+      - "admin@example.com"
+      - "tech-lead@example.com"
+      
+  email_business:
+    type: email
+    addresses:
+      - "business-admin@example.com"
+      - "accounting@example.com"
+
+# ===================
+# MLMビジネス固有アラート
+# ===================
+
+business_alerts:
+  # 決済処理エラー
+  payment_processing_error:
+    display_name: "決済処理エラー"
+    documentation:
+      content: "Univapayとの決済処理でエラーが発生しています。即座に対応が必要です。"
+      mime_type: "text/markdown"
+    
+    conditions:
+      - display_name: "決済エラー率"
+        condition_threshold:
+          filter: 'resource.type="cloud_run_revision" AND jsonPayload.event_type="payment_processing" AND jsonPayload.status="error"'
+          comparison: COMPARISON_GREATER_THAN
+          threshold_value: 2
+          duration: "300s"
+          aggregations:
+            - alignment_period: "300s"
+              per_series_aligner: ALIGN_RATE
+              cross_series_reducer: REDUCE_SUM
+              
+    alert_strategy:
+      auto_close: "604800s"  # 7日後自動クローズ
+      
+    notification_channels:
+      - slack_critical
+      - email_admin
+      - email_business
+      
+    severity: CRITICAL
+
+  # 報酬計算処理エラー
+  reward_calculation_error:
+    display_name: "報酬計算エラー"
+    documentation:
+      content: "月次報酬計算処理でエラーが発生しています。MLM業務に重大な影響があります。"
+      mime_type: "text/markdown"
+      
+    conditions:
+      - display_name: "報酬計算エラー"
+        condition_threshold:
+          filter: 'resource.type="cloud_run_revision" AND jsonPayload.event_type="reward_calculation" AND severity="ERROR"'
+          comparison: COMPARISON_GREATER_THAN
+          threshold_value: 0
+          duration: "60s"
+          
+    notification_channels:
+      - slack_critical
+      - email_admin
+      - email_business
+      
+    severity: CRITICAL
+
+  # GMO CSV生成エラー
+  gmo_csv_generation_error:
+    display_name: "GMO CSV生成エラー"
+    documentation:
+      content: "GMOネットバンク用CSV生成でエラーが発生しています。支払処理が停止する可能性があります。"
+      mime_type: "text/markdown"
+      
+    conditions:
+      - display_name: "GMO CSV生成エラー"
+        condition_threshold:
+          filter: 'resource.type="cloud_run_revision" AND jsonPayload.event_type="payout_processing" AND jsonPayload.gmo_csv_generated=false'
+          comparison: COMPARISON_GREATER_THAN
+          threshold_value: 0
+          duration: "60s"
+          
+    notification_channels:
+      - slack_critical
+      - email_admin
+      - email_business
+      
+    severity: CRITICAL
+
+  # 会員数上限到達警告
+  member_limit_warning:
+    display_name: "会員数上限接近警告"
+    documentation:
+      content: "会員数が上限50名に接近しています。新規登録制限を確認してください。"
+      mime_type: "text/markdown"
+      
+    conditions:
+      - display_name: "会員数45名以上"
+        condition_threshold:
+          filter: 'resource.type="cloud_run_revision" AND jsonPayload.member_count>=45'
+          comparison: COMPARISON_GREATER_THAN
+          threshold_value: 44
+          duration: "300s"
+          
+    notification_channels:
+      - slack_warning
+      - email_business
+      
+    severity: WARNING
+
+# ===================
+# システムアラート
+# ===================
+
+system_alerts:
+  # アプリケーションエラー率
+  application_error_rate:
+    display_name: "アプリケーションエラー率"
+    documentation:
+      content: "アプリケーションのエラー率が高くなっています。システムの健全性を確認してください。"
+      mime_type: "text/markdown"
+      
+    conditions:
+      - display_name: "エラー率5%以上"
+        condition_threshold:
+          filter: 'resource.type="cloud_run_revision" AND resource.labels.service_name="iroas-boss-v2-backend"'
+          comparison: COMPARISON_GREATER_THAN
+          threshold_value: 0.05
+          duration: "300s"
+          aggregations:
+            - alignment_period: "300s"
+              per_series_aligner: ALIGN_RATE
+              cross_series_reducer: REDUCE_MEAN
+              group_by_fields:
+                - "resource.label.service_name"
+                
+    notification_channels:
+      - slack_warning
+      - email_admin
+      
+    severity: WARNING
+
+  # レスポンス時間
+  response_time_high:
+    display_name: "レスポンス時間異常"
+    documentation:
+      content: "APIレスポンス時間が異常に高くなっています。パフォーマンスを確認してください。"
+      mime_type: "text/markdown"
+      
+    conditions:
+      - display_name: "平均レスポンス時間2秒以上"
+        condition_threshold:
+          filter: 'resource.type="cloud_run_revision" AND resource.labels.service_name="iroas-boss-v2-backend"'
+          comparison: COMPARISON_GREATER_THAN
+          threshold_value: 2000  # ミリ秒
+          duration: "600s"
+          aggregations:
+            - alignment_period: "300s"
+              per_series_aligner: ALIGN_MEAN
+              cross_series_reducer: REDUCE_MEAN
+              
+    notification_channels:
+      - slack_warning
+      - email_admin
+      
+    severity: WARNING
+
+  # CPU使用率
+  cpu_utilization_high:
+    display_name: "CPU使用率高"
+    documentation:
+      content: "Cloud RunインスタンスのCPU使用率が高くなっています。スケーリングまたは最適化が必要かもしれません。"
+      mime_type: "text/markdown"
+      
+    conditions:
+      - display_name: "CPU使用率80%以上"
+        condition_threshold:
+          filter: 'resource.type="cloud_run_revision" AND metric.type="run.googleapis.com/container/cpu/utilizations"'
+          comparison: COMPARISON_GREATER_THAN
+          threshold_value: 0.8
+          duration: "600s"
+          aggregations:
+            - alignment_period: "300s"
+              per_series_aligner: ALIGN_MEAN
+              cross_series_reducer: REDUCE_MEAN
+              
+    notification_channels:
+      - slack_warning
+      - email_admin
+      
+    severity: WARNING
+
+  # メモリ使用率
+  memory_utilization_high:
+    display_name: "メモリ使用率高"
+    documentation:
+      content: "Cloud Runインスタンスのメモリ使用率が高くなっています。メモリリークまたは設定見直しが必要かもしれません。"
+      mime_type: "text/markdown"
+      
+    conditions:
+      - display_name: "メモリ使用率85%以上"
+        condition_threshold:
+          filter: 'resource.type="cloud_run_revision" AND metric.type="run.googleapis.com/container/memory/utilizations"'
+          comparison: COMPARISON_GREATER_THAN
+          threshold_value: 0.85
+          duration: "600s"
+          aggregations:
+            - alignment_period: "300s"
+              per_series_aligner: ALIGN_MEAN
+              cross_series_reducer: REDUCE_MEAN
+              
+    notification_channels:
+      - slack_warning
+      - email_admin
+      
+    severity: WARNING
+
+  # データベース接続エラー
+  database_connection_error:
+    display_name: "データベース接続エラー"
+    documentation:
+      content: "PostgreSQLデータベースへの接続でエラーが発生しています。データベースの状態を確認してください。"
+      mime_type: "text/markdown"
+      
+    conditions:
+      - display_name: "DB接続エラー"
+        condition_threshold:
+          filter: 'resource.type="cloud_run_revision" AND jsonPayload.error_type="database_connection"'
+          comparison: COMPARISON_GREATER_THAN
+          threshold_value: 2
+          duration: "300s"
+          
+    notification_channels:
+      - slack_critical
+      - email_admin
+      
+    severity: CRITICAL
+
+# ===================
+# インフラアラート
+# ===================
+
+infrastructure_alerts:
+  # Cloud Runインスタンス起動失敗
+  cloud_run_instance_startup_failure:
+    display_name: "Cloud Runインスタンス起動失敗"
+    documentation:
+      content: "Cloud Runインスタンスの起動に失敗しています。デプロイまたは設定に問題がある可能性があります。"
+      mime_type: "text/markdown"
+      
+    conditions:
+      - display_name: "インスタンス起動失敗"
+        condition_threshold:
+          filter: 'resource.type="cloud_run_revision" AND metric.type="run.googleapis.com/container/startup_latencies"'
+          comparison: COMPARISON_GREATER_THAN
+          threshold_value: 30000  # 30秒
+          duration: "60s"
+          
+    notification_channels:
+      - slack_critical
+      - email_admin
+      
+    severity: CRITICAL
+
+  # Vercelデプロイ失敗
+  vercel_deployment_failure:
+    display_name: "Vercelデプロイ失敗"
+    documentation:
+      content: "Vercelへのフロントエンドデプロイが失敗しています。ビルドエラーまたは設定を確認してください。"
+      mime_type: "text/markdown"
+      
+    conditions:
+      - display_name: "デプロイ失敗"
+        condition_absent:
+          filter: 'resource.type="vercel_deployment" AND jsonPayload.status="success"'
+          duration: "1800s"  # 30分以内にSuccessfulデプロイがない場合
+          
+    notification_channels:
+      - slack_warning
+      - email_admin
+      
+    severity: WARNING
+
+# ===================
+# セキュリティアラート
+# ===================
+
+security_alerts:
+  # 異常なアクセス試行
+  suspicious_access_attempts:
+    display_name: "疑わしいアクセス試行"
+    documentation:
+      content: "短時間に大量のアクセス試行が検出されました。DDoS攻撃またはブルートフォース攻撃の可能性があります。"
+      mime_type: "text/markdown"
+      
+    conditions:
+      - display_name: "高頻度アクセス"
+        condition_threshold:
+          filter: 'resource.type="cloud_run_revision" AND httpRequest.status>=400'
+          comparison: COMPARISON_GREATER_THAN
+          threshold_value: 50
+          duration: "300s"
+          aggregations:
+            - alignment_period: "300s"
+              per_series_aligner: ALIGN_RATE
+              cross_series_reducer: REDUCE_SUM
+              group_by_fields:
+                - "httpRequest.remoteIp"
+                
+    notification_channels:
+      - slack_critical
+      - email_admin
+      
+    severity: CRITICAL
+
+  # 不正ログイン試行（Phase 21で有効化）
+  unauthorized_login_attempts:
+    display_name: "不正ログイン試行"
+    documentation:
+      content: "認証機能実装後に不正なログイン試行が検出されました。"
+      mime_type: "text/markdown"
+      
+    enabled: false  # Phase 21で有効化
+    
+    conditions:
+      - display_name: "ログイン失敗"
+        condition_threshold:
+          filter: 'resource.type="cloud_run_revision" AND jsonPayload.event_type="login_failure"'
+          comparison: COMPARISON_GREATER_THAN
+          threshold_value: 10
+          duration: "300s"
+          
+    notification_channels:
+      - slack_critical
+      - email_admin
+      
+    severity: CRITICAL
+
+# ===================
+# アラートポリシー適用環境
+# ===================
+
+environments:
+  production:
+    apply_all: true
+    severity_filter: ["CRITICAL", "WARNING"]
+    
+  staging:
+    apply_all: false
+    include_alerts:
+      - "application_error_rate"
+      - "response_time_high"
+      - "database_connection_error"
+    severity_filter: ["CRITICAL"]
+    
+  development:
+    apply_all: false
+    include_alerts:
+      - "database_connection_error"
+    severity_filter: ["CRITICAL"]

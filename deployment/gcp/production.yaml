@@ -1,0 +1,171 @@
+# IROAS BOSS V2 - 本番環境 Cloud Run設定
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: iroas-boss-v2-backend
+  labels:
+    cloud.googleapis.com/location: asia-northeast1
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+spec:
+  template:
+    metadata:
+      labels:
+        environment: production
+      annotations:
+        # リソース設定
+        run.googleapis.com/cpu: "2000m"
+        run.googleapis.com/memory: "2Gi"
+        
+        # オートスケーリング設定
+        autoscaling.knative.dev/maxScale: "10"
+        autoscaling.knative.dev/minScale: "1"
+        run.googleapis.com/execution-environment: gen2
+        
+        # セキュリティ設定
+        run.googleapis.com/vpc-access-connector: projects/PROJECT_ID/locations/asia-northeast1/connectors/iroas-vpc-connector
+        run.googleapis.com/vpc-access-egress: all-traffic
+    spec:
+      containerConcurrency: 100
+      timeoutSeconds: 900
+      serviceAccountName: iroas-boss-v2-backend@PROJECT_ID.iam.gserviceaccount.com
+      
+      containers:
+      - image: gcr.io/PROJECT_ID/iroas-boss-v2-backend:latest
+        name: iroas-boss-v2-backend
+        
+        # ポート設定
+        ports:
+        - name: http1
+          containerPort: 8080
+        
+        # 環境変数
+        env:
+        # アプリケーション設定
+        - name: PROJECT_NAME
+          value: "IROAS BOSS v2"
+        - name: DEBUG
+          value: "False"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: API_V1_STR
+          value: "/api/v1"
+        
+        # データベース設定（Secret Manager参照）
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-url-production
+              key: latest
+        
+        # Redis設定（Secret Manager参照）  
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: redis-url-production
+              key: latest
+        
+        # セキュリティ設定（Secret Manager参照）
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: secret-key-production
+              key: latest
+        
+        # MLM業務設定（要件定義書準拠）
+        - name: HERO_PLAN_PRICE
+          value: "10670"
+        - name: TEST_PLAN_PRICE
+          value: "9800"
+        - name: MINIMUM_PAYOUT_AMOUNT
+          value: "5000"
+        - name: REWARD_CALCULATION_DAY
+          value: "25"
+        - name: MAX_MEMBERS
+          value: "50"
+        
+        # URL設定
+        - name: FRONTEND_URL
+          value: "https://iroas-boss-v2.vercel.app"
+        - name: CORS_ORIGINS
+          value: '["https://iroas-boss-v2.vercel.app"]'
+        
+        # Univapay設定（Secret Manager参照）
+        - name: UNIVAPAY_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: univapay-api-key-production
+              key: latest
+        - name: UNIVAPAY_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: univapay-secret-key-production
+              key: latest
+        
+        # GMO設定（Secret Manager参照）
+        - name: GMO_BANK_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: gmo-bank-api-key-production
+              key: latest
+        
+        # CSV設定
+        - name: CSV_ENCODING
+          value: "Shift-JIS"
+        - name: CSV_ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: csv-encryption-key-production
+              key: latest
+        
+        # セッション設定
+        - name: SESSION_EXPIRE_HOURS
+          value: "12"
+        
+        # 監視設定
+        - name: ERROR_NOTIFICATION_EMAIL
+          value: "admin@example.com"
+        
+        # リソース設定
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+          requests:
+            cpu: 1000m
+            memory: 1Gi
+        
+        # ヘルスチェック設定
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 60
+          timeoutSeconds: 10
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        # スタートアップチェック
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+
+  traffic:
+  - percent: 100
+    latestRevision: true

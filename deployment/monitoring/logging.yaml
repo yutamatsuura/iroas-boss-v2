@@ -1,0 +1,286 @@
+# IROAS BOSS V2 - ログ設定
+# Google Cloud Logging設定
+
+# ===================
+# ログレベル設定
+# ===================
+
+logging:
+  # 本番環境
+  production:
+    level: INFO
+    format: json
+    structured: true
+    
+    # MLMビジネス固有ログ
+    business_events:
+      member_registration: INFO
+      payment_processing: INFO  
+      reward_calculation: INFO
+      payout_processing: INFO
+      organization_adjustment: WARN
+      csv_export: INFO
+      csv_import: WARN
+      
+    # システムログ
+    system_events:
+      api_requests: INFO
+      database_operations: WARN
+      authentication: INFO
+      errors: ERROR
+      performance: INFO
+      
+  # ステージング環境
+  staging:
+    level: DEBUG
+    format: json
+    structured: true
+    
+    business_events:
+      member_registration: DEBUG
+      payment_processing: DEBUG
+      reward_calculation: DEBUG
+      payout_processing: DEBUG
+      organization_adjustment: DEBUG
+      csv_export: DEBUG
+      csv_import: DEBUG
+      
+    system_events:
+      api_requests: DEBUG
+      database_operations: DEBUG
+      authentication: DEBUG
+      errors: ERROR
+      performance: DEBUG
+      
+  # 開発環境
+  development:
+    level: DEBUG
+    format: text
+    structured: false
+    console_output: true
+    
+    business_events:
+      member_registration: DEBUG
+      payment_processing: DEBUG
+      reward_calculation: DEBUG
+      payout_processing: DEBUG
+      organization_adjustment: DEBUG
+      csv_export: DEBUG
+      csv_import: DEBUG
+      
+    system_events:
+      api_requests: DEBUG
+      database_operations: DEBUG
+      authentication: DEBUG
+      errors: ERROR
+      performance: DEBUG
+
+# ===================
+# ログ出力先設定
+# ===================
+
+outputs:
+  production:
+    - type: cloud_logging
+      project_id: "PROJECT_ID"
+      log_name: "iroas-boss-v2-production"
+      resource:
+        type: cloud_run_revision
+        labels:
+          service_name: iroas-boss-v2-backend
+          revision_name: "{revision}"
+          
+    - type: file
+      path: "/var/log/iroas-boss-v2/app.log"
+      rotation: daily
+      retention_days: 30
+      
+  staging:
+    - type: cloud_logging
+      project_id: "PROJECT_ID"
+      log_name: "iroas-boss-v2-staging"
+      resource:
+        type: cloud_run_revision
+        labels:
+          service_name: iroas-boss-v2-backend-staging
+          revision_name: "{revision}"
+          
+  development:
+    - type: console
+    - type: file
+      path: "./logs/development.log"
+
+# ===================
+# ログフィルター設定
+# ===================
+
+filters:
+  # 除外するログ
+  exclude:
+    - resource.type="cloud_run_revision"
+    - jsonPayload.level="DEBUG"
+    - httpRequest.requestUrl=~"/health"
+    - httpRequest.requestUrl=~"/metrics"
+    
+  # 重要なログ（必ず記録）
+  include_always:
+    - jsonPayload.event_type="member_registration"
+    - jsonPayload.event_type="payment_processing"
+    - jsonPayload.event_type="reward_calculation"
+    - jsonPayload.event_type="payout_processing"
+    - jsonPayload.event_type="csv_export"
+    - jsonPayload.event_type="organization_adjustment"
+    - severity="ERROR"
+    - severity="CRITICAL"
+
+# ===================
+# MLMビジネスイベント構造化ログ
+# ===================
+
+structured_logs:
+  # 会員登録ログ
+  member_registration:
+    fields:
+      - event_type: "member_registration"
+      - member_number: string
+      - member_name: string
+      - plan: string
+      - payment_method: string
+      - upline_id: string
+      - referrer_id: string
+      - timestamp: datetime
+      - user_id: string
+      - ip_address: string
+      
+  # 決済処理ログ
+  payment_processing:
+    fields:
+      - event_type: "payment_processing"
+      - member_number: string
+      - payment_method: string
+      - amount: integer
+      - status: string
+      - univapay_transaction_id: string
+      - timestamp: datetime
+      
+  # 報酬計算ログ
+  reward_calculation:
+    fields:
+      - event_type: "reward_calculation"
+      - calculation_month: string
+      - member_count: integer
+      - total_rewards: integer
+      - bonus_types: array
+      - execution_time: float
+      - timestamp: datetime
+      
+  # 支払処理ログ
+  payout_processing:
+    fields:
+      - event_type: "payout_processing"
+      - target_month: string
+      - member_count: integer
+      - total_amount: integer
+      - gmo_csv_generated: boolean
+      - timestamp: datetime
+      
+  # CSV処理ログ
+  csv_processing:
+    fields:
+      - event_type: "csv_processing"
+      - operation: string # export/import
+      - data_type: string
+      - file_size: integer
+      - record_count: integer
+      - encoding: string
+      - success_rate: float
+      - timestamp: datetime
+      
+  # 組織調整ログ  
+  organization_adjustment:
+    fields:
+      - event_type: "organization_adjustment"
+      - member_number: string
+      - adjustment_type: string
+      - old_upline_id: string
+      - new_upline_id: string
+      - reason: string
+      - adjusted_by: string
+      - approved: boolean
+      - timestamp: datetime
+
+# ===================
+# アラート設定
+# ===================
+
+alerts:
+  # エラー率アラート
+  error_rate:
+    condition: error_rate > 5%
+    duration: 5m
+    notification:
+      - slack_webhook
+      - email
+      
+  # レスポンス時間アラート
+  response_time:
+    condition: avg_response_time > 2s
+    duration: 10m
+    notification:
+      - slack_webhook
+      
+  # 決済エラーアラート
+  payment_errors:
+    condition: payment_error_count > 3
+    duration: 1m
+    notification:
+      - slack_webhook
+      - email
+      - sms
+      
+  # 報酬計算エラーアラート
+  reward_calculation_errors:
+    condition: reward_calculation_error > 0
+    duration: 1m
+    notification:
+      - slack_webhook
+      - email
+      - sms
+
+# ===================
+# ログ保持期間
+# ===================
+
+retention:
+  production:
+    business_logs: 7_years  # MLM業務ログは法的要件により長期保存
+    system_logs: 1_year
+    error_logs: 3_years
+    
+  staging:
+    business_logs: 1_year
+    system_logs: 6_months
+    error_logs: 1_year
+    
+  development:
+    business_logs: 3_months
+    system_logs: 1_month
+    error_logs: 6_months
+
+# ===================
+# ログ暗号化設定
+# ===================
+
+encryption:
+  production:
+    enabled: true
+    key_management: google_kms
+    key_id: "projects/PROJECT_ID/locations/asia-northeast1/keyRings/iroas-logs/cryptoKeys/log-encryption"
+    
+  staging:
+    enabled: true
+    key_management: google_kms
+    key_id: "projects/PROJECT_ID/locations/asia-northeast1/keyRings/iroas-logs/cryptoKeys/log-encryption-staging"
+    
+  development:
+    enabled: false
