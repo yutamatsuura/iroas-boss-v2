@@ -52,12 +52,20 @@ initialize_test() {
     mkdir -p "$TEST_RESULTS_DIR"
     
     # 必要なコマンドチェック
-    for cmd in curl jq; do
+    for cmd in curl; do
         if ! command -v $cmd >/dev/null 2>&1; then
             error "必須コマンドが見つかりません: $cmd"
             exit 1
         fi
     done
+    
+    # jq が利用可能かチェック（オプショナル）
+    if command -v jq >/dev/null 2>&1; then
+        JQ_AVAILABLE=true
+    else
+        JQ_AVAILABLE=false
+        warning "jq コマンドが見つかりません。JSON解析機能は制限されます。"
+    fi
 }
 
 # ===================
@@ -119,7 +127,8 @@ test_frontend() {
     
     # 3. リソース読み込み確認
     local response_time=$(curl -s -w "%{time_total}" -o /dev/null "$url")
-    if (( $(echo "$response_time < 3.0" | bc -l) )); then
+    local response_time_int=$(echo "$response_time * 1000" | awk '{printf "%.0f", $1}')  # ミリ秒に変換
+    if [[ $response_time_int -lt 3000 ]]; then
         success "$env_name レスポンス時間良好: ${response_time}秒"
     else
         warning "$env_name レスポンス時間遅延: ${response_time}秒"
@@ -192,42 +201,42 @@ test_mlm_specific_features() {
     
     # 1. 会員管理API（29項目データ対応確認）
     log "会員管理API検証（29項目データ対応）"
-    local members_response=$(curl -s "$backend_url/api/v1/members" | jq -r '.error // "OK"' 2>/dev/null || echo "API_ERROR")
+    local members_status=$(curl -s -o /dev/null -w "%{http_code}" "$backend_url/api/v1/members")
     
-    if [[ "$members_response" != "API_ERROR" ]]; then
-        success "$env_name 会員管理API応答確認"
+    if [[ "$members_status" =~ ^(200|401|403)$ ]]; then
+        success "$env_name 会員管理API応答確認 (HTTP: $members_status)"
     else
-        warning "$env_name 会員管理API応答確認失敗"
+        warning "$env_name 会員管理API応答確認失敗 (HTTP: $members_status)"
     fi
     
     # 2. 報酬計算API（7種ボーナス対応確認）
     log "報酬計算API検証（7種ボーナス対応）"
-    local rewards_response=$(curl -s "$backend_url/api/v1/rewards/history" | jq -r '.error // "OK"' 2>/dev/null || echo "API_ERROR")
+    local rewards_status=$(curl -s -o /dev/null -w "%{http_code}" "$backend_url/api/v1/rewards/history")
     
-    if [[ "$rewards_response" != "API_ERROR" ]]; then
-        success "$env_name 報酬計算API応答確認"
+    if [[ "$rewards_status" =~ ^(200|401|403)$ ]]; then
+        success "$env_name 報酬計算API応答確認 (HTTP: $rewards_status)"
     else
-        warning "$env_name 報酬計算API応答確認失敗"
+        warning "$env_name 報酬計算API応答確認失敗 (HTTP: $rewards_status)"
     fi
     
     # 3. 決済管理API（Univapay連携対応確認）
     log "決済管理API検証（Univapay連携対応）"
-    local payments_response=$(curl -s "$backend_url/api/v1/payments/targets/card" | jq -r '.error // "OK"' 2>/dev/null || echo "API_ERROR")
+    local payments_status=$(curl -s -o /dev/null -w "%{http_code}" "$backend_url/api/v1/payments/targets/card")
     
-    if [[ "$payments_response" != "API_ERROR" ]]; then
-        success "$env_name 決済管理API応答確認"
+    if [[ "$payments_status" =~ ^(200|401|403)$ ]]; then
+        success "$env_name 決済管理API応答確認 (HTTP: $payments_status)"
     else
-        warning "$env_name 決済管理API応答確認失敗"
+        warning "$env_name 決済管理API応答確認失敗 (HTTP: $payments_status)"
     fi
     
     # 4. 組織図API（手動調整対応確認）
     log "組織図API検証（手動調整対応）"
-    local organization_response=$(curl -s "$backend_url/api/v1/organization/tree" | jq -r '.error // "OK"' 2>/dev/null || echo "API_ERROR")
+    local organization_status=$(curl -s -o /dev/null -w "%{http_code}" "$backend_url/api/v1/organization/tree")
     
-    if [[ "$organization_response" != "API_ERROR" ]]; then
-        success "$env_name 組織図API応答確認"
+    if [[ "$organization_status" =~ ^(200|401|403)$ ]]; then
+        success "$env_name 組織図API応答確認 (HTTP: $organization_status)"
     else
-        warning "$env_name 組織図API応答確認失敗"
+        warning "$env_name 組織図API応答確認失敗 (HTTP: $organization_status)"
     fi
 }
 
@@ -276,10 +285,11 @@ test_performance() {
     local metrics=$(curl -s -w "time_namelookup:%{time_namelookup}\ntime_connect:%{time_connect}\ntime_appconnect:%{time_appconnect}\ntime_pretransfer:%{time_pretransfer}\ntime_starttransfer:%{time_starttransfer}\ntime_total:%{time_total}\n" -o /dev/null "$url")
     
     local total_time=$(echo "$metrics" | grep "time_total" | cut -d: -f2)
+    local total_time_int=$(echo "$total_time * 1000" | awk '{printf "%.0f", $1}')
     
-    if (( $(echo "$total_time < 2.0" | bc -l) )); then
+    if [[ $total_time_int -lt 2000 ]]; then
         success "$env_name パフォーマンス良好: ${total_time}秒"
-    elif (( $(echo "$total_time < 5.0" | bc -l) )); then
+    elif [[ $total_time_int -lt 5000 ]]; then
         warning "$env_name パフォーマンス要注意: ${total_time}秒"
     else
         error "$env_name パフォーマンス不良: ${total_time}秒"
