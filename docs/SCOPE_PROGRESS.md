@@ -194,12 +194,12 @@ iroas-boss-v2の開発は以下のフローに沿って進行します：
 ### 🎯 Phase C-1: 報酬計算API群（B-1a, B-2b依存）
 | 番号 | Phase | エンドポイント | HTTPメソッド | 説明 | 対応ページ | 実装 | 依存 |
 |------|-------|--------------|-------------|------|----------|------|------|
-| 4.1 | C-1a | `/api/rewards/check-prerequisites` | GET | 計算前提条件確認 | P-005 | [ ] | B-1a, B-2b |
-| 4.2 | C-1b | `/api/rewards/calculate` | POST | 報酬計算実行 | P-005 | [ ] | C-1a |
-| 4.3 | C-1c | `/api/rewards/results/{id}` | GET | 計算結果取得 | P-005 | [ ] | C-1b |
-| 4.4 | C-1c | `/api/rewards/results/{id}/member/{mid}` | GET | 個人別内訳 | P-005 | [ ] | C-1b |
-| 4.5 | C-1c | `/api/rewards/results/{id}` | DELETE | 計算結果削除 | P-005 | [ ] | C-1b |
-| 4.6 | C-1c | `/api/rewards/history` | GET | 計算履歴 | P-005 | [ ] | C-1b |
+| 4.1 | C-1a | `/api/rewards/check-prerequisites` | GET | 計算前提条件確認 | P-005 | ✅ | B-1a, B-2b |
+| 4.2 | C-1b | `/api/rewards/calculate` | POST | 報酬計算実行 | P-005 | ✅ | C-1a |
+| 4.3 | C-1c | `/api/rewards/results/{id}` | GET | 計算結果取得 | P-005 | ✅ | C-1b |
+| 4.4 | C-1c | `/api/rewards/results/{id}/member/{mid}` | GET | 個人別内訳 | P-005 | ✅ | C-1b |
+| 4.5 | C-1c | `/api/rewards/results/{id}` | DELETE | 計算結果削除 | P-005 | ✅ | C-1b |
+| 4.6 | C-1c | `/api/rewards/history` | GET | 計算履歴 | P-005 | ✅ | C-1b |
 
 ### 🏆 Phase D-1: 支払管理API群（C-1c依存）
 | 番号 | Phase | エンドポイント | HTTPメソッド | 説明 | 対応ページ | 実装 | 依存 |
