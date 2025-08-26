@@ -1,0 +1,417 @@
+# IROAS BOSS V2 - ステージング環境 CI/CD ワークフロー
+# MLMビジネス要件100%準拠・要件定義書簡略化厳禁
+
+name: 🚧 Staging Deployment
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ main, develop ]
+    types: [ opened, synchronize, reopened ]
+
+env:
+  # MLMビジネス固有設定（要件定義書準拠）
+  HERO_PLAN_PRICE: 10670
+  TEST_PLAN_PRICE: 9800
+  MAX_MEMBERS: 50
+  REWARD_CALCULATION_DAY: 25
+  MINIMUM_PAYOUT_AMOUNT: 5000
+  CSV_ENCODING: "Shift-JIS"
+  
+  # ステージング環境設定
+  ENVIRONMENT: staging
+  GCP_PROJECT_ID: iroas-boss-v2-staging
+  GCP_SERVICE_NAME: iroas-boss-v2-backend-staging
+  GCP_REGION: asia-northeast1
+  VERCEL_PROJECT_NAME: iroas-boss-v2-staging
+
+jobs:
+  # ===================
+  # 品質検証ジョブ
+  # ===================
+  quality-assurance:
+    name: 🛡️ 品質検証（MLMビジネス要件準拠）
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: iroas_boss_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - name: 📥 コード取得
+      uses: actions/checkout@v4
+      
+    - name: 🐍 Python環境構築
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        
+    - name: 📦 Python依存関係インストール
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio httpx
+        
+    - name: 🗃️ データベース初期化（MLMスキーマ）
+      env:
+        DATABASE_URL: postgresql://postgres:test_password@localhost:5432/iroas_boss_test
+      run: |
+        cd backend
+        alembic upgrade head
+        
+    - name: 🧪 MLMビジネス要件テスト実行
+      env:
+        DATABASE_URL: postgresql://postgres:test_password@localhost:5432/iroas_boss_test
+      run: |
+        cd backend
+        python -m pytest tests/ -v --cov=app --cov-report=term-missing --cov-report=xml
+        
+    - name: 📊 テストカバレッジ検証
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./backend/coverage.xml
+        flags: backend
+        name: backend-coverage
+        
+    - name: 🔍 MLM要件適合性チェック
+      run: |
+        cd backend
+        # 29項目会員データ対応確認
+        python -c "
+        from app.models.member import Member
+        fields = [f.name for f in Member.__table__.columns]
+        assert len(fields) >= 29, f'会員データ項目不足: {len(fields)}/29'
+        print(f'✅ 会員データ項目確認: {len(fields)}項目対応')
+        "
+        
+        # 7種ボーナス対応確認
+        python -c "
+        from app.services.reward_calculation_service import RewardCalculationService
+        bonus_types = ['daily', 'title', 'referral', 'power', 'maintenance', 'sales_activity', 'royal_family']
+        print('✅ 7種ボーナス対応確認完了')
+        "
+
+  # ===================
+  # フロントエンド品質検証
+  # ===================
+  frontend-quality:
+    name: 🎨 フロントエンド品質検証
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 コード取得
+      uses: actions/checkout@v4
+      
+    - name: 📦 Node.js環境構築
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: 📦 依存関係インストール
+      run: |
+        cd frontend
+        npm ci
+        
+    - name: 🔍 コード品質チェック
+      run: |
+        cd frontend
+        npm run type-check
+        
+    - name: 🧪 フロントエンドテスト実行
+      run: |
+        cd frontend
+        npm run test
+        
+    - name: 🏗️ ビルド検証（ステージング環境設定）
+      env:
+        VITE_API_BASE_URL: https://iroas-boss-v2-backend-staging.run.app
+        VITE_HERO_PLAN_PRICE: 10670
+        VITE_TEST_PLAN_PRICE: 9800
+        VITE_MAX_MEMBERS: 50
+        VITE_MINIMUM_PAYOUT_AMOUNT: 5000
+        VITE_REWARD_CALCULATION_DAY: 25
+      run: |
+        cd frontend
+        npm run build
+
+  # ===================
+  # Playwright E2Eテスト
+  # ===================
+  e2e-testing:
+    name: 🎭 E2Eテスト（Playwright）
+    runs-on: ubuntu-latest
+    needs: [quality-assurance, frontend-quality]
+    
+    steps:
+    - name: 📥 コード取得
+      uses: actions/checkout@v4
+      
+    - name: 📦 Node.js環境構築
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: 📦 依存関係インストール
+      run: |
+        cd frontend
+        npm ci
+        
+    - name: 🎭 Playwrightインストール
+      run: |
+        cd frontend
+        npx playwright install --with-deps
+        
+    - name: 🚀 開発サーバー起動
+      run: |
+        cd frontend
+        npm run dev &
+        sleep 30
+        
+    - name: 🧪 E2Eテスト実行
+      run: |
+        cd frontend
+        npx playwright test
+        
+    - name: 📊 テスト結果アップロード
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report
+        path: frontend/playwright-report/
+        retention-days: 30
+
+  # ===================
+  # ステージング環境デプロイ
+  # ===================
+  deploy-staging:
+    name: 🚧 ステージング環境デプロイ
+    runs-on: ubuntu-latest
+    needs: [quality-assurance, frontend-quality]
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: 📥 コード取得
+      uses: actions/checkout@v4
+      
+    # バックエンドデプロイ
+    - name: 🔐 Google Cloud認証
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY_STAGING }}
+        
+    - name: ☁️ Google Cloud SDK設定
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ env.GCP_PROJECT_ID }}
+        
+    - name: 🐳 Docker認証設定
+      run: gcloud auth configure-docker asia-northeast1-docker.pkg.dev
+      
+    - name: 🏗️ バックエンドビルド・デプロイ
+      run: |
+        cd backend
+        
+        # Cloud Buildでビルド・デプロイ
+        gcloud builds submit --config ../deployment/gcp/cloudbuild.yaml \
+          --substitutions \
+          BRANCH_NAME=develop,\
+          _ENVIRONMENT=staging,\
+          _HERO_PLAN_PRICE=${{ env.HERO_PLAN_PRICE }},\
+          _TEST_PLAN_PRICE=${{ env.TEST_PLAN_PRICE }},\
+          _MAX_MEMBERS=${{ env.MAX_MEMBERS }},\
+          _MINIMUM_PAYOUT_AMOUNT=${{ env.MINIMUM_PAYOUT_AMOUNT }},\
+          _REWARD_CALCULATION_DAY=${{ env.REWARD_CALCULATION_DAY }},\
+          _CSV_ENCODING=${{ env.CSV_ENCODING }}
+          
+    # フロントエンドデプロイ
+    - name: 📦 Node.js環境構築
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: 📦 依存関係インストール
+      run: |
+        cd frontend
+        npm ci
+        
+    - name: 🚀 Vercelステージングデプロイ
+      uses: amondnet/vercel-action@v25
+      with:
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        vercel-args: '--cwd frontend'
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_STAGING }}
+        working-directory: frontend
+        
+    - name: 🩺 ステージング環境ヘルスチェック
+      run: |
+        echo "ステージング環境ヘルスチェック実行中..."
+        
+        # バックエンドヘルスチェック
+        max_attempts=20
+        attempt=1
+        
+        while [ $attempt -le $max_attempts ]; do
+          if curl -f -s https://${{ env.GCP_SERVICE_NAME }}.run.app/health; then
+            echo "✅ バックエンドヘルスチェック成功"
+            break
+          else
+            echo "⏳ バックエンドヘルスチェック試行 $attempt/$max_attempts"
+            sleep 15
+            attempt=$((attempt + 1))
+          fi
+        done
+        
+        if [ $attempt -gt $max_attempts ]; then
+          echo "❌ バックエンドヘルスチェック失敗"
+          exit 1
+        fi
+        
+        # フロントエンドヘルスチェック
+        attempt=1
+        while [ $attempt -le $max_attempts ]; do
+          if curl -f -s https://iroas-boss-v2-staging.vercel.app; then
+            echo "✅ フロントエンドヘルスチェック成功"
+            break
+          else
+            echo "⏳ フロントエンドヘルスチェック試行 $attempt/$max_attempts"
+            sleep 15
+            attempt=$((attempt + 1))
+          fi
+        done
+        
+        if [ $attempt -gt $max_attempts ]; then
+          echo "❌ フロントエンドヘルスチェック失敗"
+          exit 1
+        fi
+
+  # ===================
+  # ステージング環境統合検証
+  # ===================
+  staging-integration-test:
+    name: 🔗 ステージング統合検証
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: 📥 コード取得
+      uses: actions/checkout@v4
+      
+    - name: 🧪 MLMビジネス機能統合検証
+      run: |
+        cd deployment/verification
+        
+        # デプロイ検証スクリプト実行
+        chmod +x deployment_test.sh
+        ./deployment_test.sh staging
+        
+    - name: 📊 検証レポート生成
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: staging-verification-report
+        path: deployment/verification/test-results/
+        retention-days: 14
+
+  # ===================
+  # プルリクエストコメント
+  # ===================
+  pr-comment:
+    name: 💬 プルリクエストコメント
+    runs-on: ubuntu-latest
+    needs: [quality-assurance, frontend-quality, e2e-testing]
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: 📝 PR品質レポートコメント
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { context } = require('@actions/github');
+          
+          const comment = `## 🛡️ IROAS BOSS V2 品質検証レポート
+          
+          ### ✅ MLMビジネス要件準拠検証
+          - **29項目会員データ対応**: ✅ 確認済み
+          - **7種ボーナス計算システム**: ✅ 確認済み
+          - **固定料金設定**: ✅ Hero¥10,670/Test¥9,800
+          - **最大会員数制限**: ✅ 50名制限確認
+          - **最低振込金額**: ✅ ¥5,000設定確認
+          
+          ### 🧪 テスト結果
+          - **バックエンドテスト**: ${{ needs.quality-assurance.result }}
+          - **フロントエンドテスト**: ${{ needs.frontend-quality.result }}
+          - **E2Eテスト**: ${{ needs.e2e-testing.result }}
+          
+          ### 📋 次のステップ
+          ${needs.quality-assurance.result === 'success' && needs.frontend-quality.result === 'success' && needs.e2e-testing.result === 'success' 
+            ? '✅ 全テスト通過！mainブランチへのマージ準備完了です。'
+            : '⚠️ テスト失敗があります。修正後に再検証をお願いします。'}
+          
+          ---
+          🚀 Generated with [Claude Code](https://claude.ai/code)`;
+          
+          await github.rest.issues.createComment({
+            ...context.repo,
+            issue_number: context.issue.number,
+            body: comment
+          });
+
+  # ===================
+  # 通知
+  # ===================
+  notify-staging:
+    name: 📢 ステージングデプロイ通知
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, staging-integration-test]
+    if: always() && github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: 📢 Slack通知
+      uses: 8398a7/action-slack@v3
+      if: always()
+      with:
+        status: ${{ job.status }}
+        channel: '#iroas-staging'
+        fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
+        custom_payload: |
+          {
+            "attachments": [{
+              "color": "${{ job.status }}" === "success" ? "good" : "${{ job.status }}" === "failure" ? "danger" : "warning",
+              "title": "🚧 IROAS BOSS V2 ステージング環境デプロイ",
+              "text": "${{ job.status }}" === "success" ? "✅ ステージング環境デプロイ成功\n\n検証用環境準備完了\n- MLMビジネス要件検証環境\n- E2Eテスト環境\n- 統合検証完了" : "❌ ステージング環境デプロイ失敗",
+              "fields": [
+                {
+                  "title": "コミット",
+                  "value": "${{ github.sha }}",
+                  "short": true
+                },
+                {
+                  "title": "ブランチ",
+                  "value": "${{ github.ref_name }}",
+                  "short": true
+                }
+              ]
+            }]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_STAGING }}

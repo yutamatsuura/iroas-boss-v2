@@ -1,82 +1,209 @@
 # IROAS BOSS V2 - Cloud Build設定
-# 自動ビルド・デプロイ設定
+# MLMビジネス要件100%準拠・CI/CD自動デプロイ設定
 
 steps:
-  # 1. Docker イメージビルド
+  # 1. MLMビジネス設定検証
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🔍 MLMビジネス設定検証開始"
+        echo "環境: $_ENVIRONMENT"
+        echo "ヒーロープラン価格: $_HERO_PLAN_PRICE"
+        echo "テストプラン価格: $_TEST_PLAN_PRICE"
+        echo "最大会員数: $_MAX_MEMBERS"
+        echo "最低振込金額: $_MINIMUM_PAYOUT_AMOUNT"
+        echo "報酬計算日: $_REWARD_CALCULATION_DAY"
+        echo "CSV エンコーディング: $_CSV_ENCODING"
+
+  # 2. Docker イメージビルド（MLM環境変数付き）
   - name: 'gcr.io/cloud-builders/docker'
     args: 
       - 'build' 
       - '-f'
       - 'deployment/gcp/Dockerfile'
+      - '--build-arg'
+      - 'ENVIRONMENT=$_ENVIRONMENT'
+      - '--build-arg'
+      - 'HERO_PLAN_PRICE=$_HERO_PLAN_PRICE'
+      - '--build-arg'
+      - 'TEST_PLAN_PRICE=$_TEST_PLAN_PRICE'
+      - '--build-arg'
+      - 'MAX_MEMBERS=$_MAX_MEMBERS'
+      - '--build-arg'
+      - 'MINIMUM_PAYOUT_AMOUNT=$_MINIMUM_PAYOUT_AMOUNT'
+      - '--build-arg'
+      - 'REWARD_CALCULATION_DAY=$_REWARD_CALCULATION_DAY'
+      - '--build-arg'
+      - 'CSV_ENCODING=$_CSV_ENCODING'
       - '-t' 
-      - 'gcr.io/$PROJECT_ID/iroas-boss-v2-backend:$SHORT_SHA'
+      - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/iroas-boss-v2/backend-$_ENVIRONMENT:$SHORT_SHA'
+      - '-t'
+      - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/iroas-boss-v2/backend-$_ENVIRONMENT:latest'
       - '.'
     
-  # 2. Docker イメージをContainer Registryにプッシュ
+  # 3. Docker イメージをArtifact Registryにプッシュ
   - name: 'gcr.io/cloud-builders/docker'
     args: 
       - 'push' 
-      - 'gcr.io/$PROJECT_ID/iroas-boss-v2-backend:$SHORT_SHA'
+      - '--all-tags'
+      - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/iroas-boss-v2/backend-$_ENVIRONMENT'
   
-  # 3. 本番環境デプロイ (mainブランチのみ)
+  # 4. 本番環境デプロイ (mainブランチのみ)
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        if [[ "$BRANCH_NAME" == "main" ]]; then
+        if [[ "$BRANCH_NAME" == "main" && "$_ENVIRONMENT" == "production" ]]; then
+          echo "🚀 本番環境デプロイ開始"
           gcloud run deploy iroas-boss-v2-backend \
-            --image gcr.io/$PROJECT_ID/iroas-boss-v2-backend:$SHORT_SHA \
+            --image asia-northeast1-docker.pkg.dev/$PROJECT_ID/iroas-boss-v2/backend-production:$SHORT_SHA \
             --region asia-northeast1 \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars="DATABASE_URL=$$DATABASE_URL_PRODUCTION,REDIS_URL=$$REDIS_URL_PRODUCTION,SECRET_KEY=$$SECRET_KEY_PRODUCTION" \
+            --service-account=iroas-boss-v2-backend@$PROJECT_ID.iam.gserviceaccount.com \
+            --set-env-vars="ENVIRONMENT=production,HERO_PLAN_PRICE=$_HERO_PLAN_PRICE,TEST_PLAN_PRICE=$_TEST_PLAN_PRICE,MAX_MEMBERS=$_MAX_MEMBERS,MINIMUM_PAYOUT_AMOUNT=$_MINIMUM_PAYOUT_AMOUNT,REWARD_CALCULATION_DAY=$_REWARD_CALCULATION_DAY,CSV_ENCODING=$_CSV_ENCODING" \
+            --set-env-vars="DATABASE_URL=$$DATABASE_URL_PRODUCTION,REDIS_URL=$$REDIS_URL_PRODUCTION,SECRET_KEY=$$SECRET_KEY_PRODUCTION,UNIVAPAY_API_KEY=$$UNIVAPAY_API_KEY_PRODUCTION,GMO_BANK_API_KEY=$$GMO_BANK_API_KEY_PRODUCTION,CSV_ENCRYPTION_KEY=$$CSV_ENCRYPTION_KEY_PRODUCTION" \
             --memory 2Gi \
             --cpu 2 \
             --max-instances 10 \
             --min-instances 1 \
-            --concurrency 100 \
-            --timeout 900
+            --concurrency 80 \
+            --timeout 900 \
+            --port 8000
+          echo "✅ 本番環境デプロイ完了"
         fi
-    secretEnv: ['DATABASE_URL_PRODUCTION', 'REDIS_URL_PRODUCTION', 'SECRET_KEY_PRODUCTION']
+    secretEnv: ['DATABASE_URL_PRODUCTION', 'REDIS_URL_PRODUCTION', 'SECRET_KEY_PRODUCTION', 'UNIVAPAY_API_KEY_PRODUCTION', 'GMO_BANK_API_KEY_PRODUCTION', 'CSV_ENCRYPTION_KEY_PRODUCTION']
   
-  # 4. ステージング環境デプロイ (developブランチ)
+  # 5. ステージング環境デプロイ (developブランチ)
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        if [[ "$BRANCH_NAME" == "develop" ]]; then
+        if [[ "$BRANCH_NAME" == "develop" && "$_ENVIRONMENT" == "staging" ]]; then
+          echo "🚧 ステージング環境デプロイ開始"
           gcloud run deploy iroas-boss-v2-backend-staging \
-            --image gcr.io/$PROJECT_ID/iroas-boss-v2-backend:$SHORT_SHA \
+            --image asia-northeast1-docker.pkg.dev/$PROJECT_ID/iroas-boss-v2/backend-staging:$SHORT_SHA \
             --region asia-northeast1 \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars="DATABASE_URL=$$DATABASE_URL_STAGING,REDIS_URL=$$REDIS_URL_STAGING,SECRET_KEY=$$SECRET_KEY_STAGING" \
+            --service-account=iroas-boss-v2-backend-staging@$PROJECT_ID.iam.gserviceaccount.com \
+            --set-env-vars="ENVIRONMENT=staging,HERO_PLAN_PRICE=$_HERO_PLAN_PRICE,TEST_PLAN_PRICE=$_TEST_PLAN_PRICE,MAX_MEMBERS=$_MAX_MEMBERS,MINIMUM_PAYOUT_AMOUNT=$_MINIMUM_PAYOUT_AMOUNT,REWARD_CALCULATION_DAY=$_REWARD_CALCULATION_DAY,CSV_ENCODING=$_CSV_ENCODING" \
+            --set-env-vars="DATABASE_URL=$$DATABASE_URL_STAGING,REDIS_URL=$$REDIS_URL_STAGING,SECRET_KEY=$$SECRET_KEY_STAGING,UNIVAPAY_API_KEY=$$UNIVAPAY_API_KEY_STAGING,GMO_BANK_API_KEY=$$GMO_BANK_API_KEY_STAGING,CSV_ENCRYPTION_KEY=$$CSV_ENCRYPTION_KEY_STAGING" \
             --memory 1Gi \
             --cpu 1 \
             --max-instances 5 \
             --min-instances 0 \
             --concurrency 50 \
-            --timeout 600
+            --timeout 600 \
+            --port 8000
+          echo "✅ ステージング環境デプロイ完了"
         fi
-    secretEnv: ['DATABASE_URL_STAGING', 'REDIS_URL_STAGING', 'SECRET_KEY_STAGING']
+    secretEnv: ['DATABASE_URL_STAGING', 'REDIS_URL_STAGING', 'SECRET_KEY_STAGING', 'UNIVAPAY_API_KEY_STAGING', 'GMO_BANK_API_KEY_STAGING', 'CSV_ENCRYPTION_KEY_STAGING']
+
+  # 6. 開発環境デプロイ (feature/hotfix/bugfixブランチ)
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        if [[ "$_ENVIRONMENT" == "development" ]]; then
+          echo "🛠️ 開発環境デプロイ開始"
+          gcloud run deploy iroas-boss-v2-backend-dev \
+            --image asia-northeast1-docker.pkg.dev/$PROJECT_ID/iroas-boss-v2/backend-development:$SHORT_SHA \
+            --region asia-northeast1 \
+            --platform managed \
+            --allow-unauthenticated \
+            --service-account=iroas-boss-v2-backend-dev@$PROJECT_ID.iam.gserviceaccount.com \
+            --set-env-vars="ENVIRONMENT=development,HERO_PLAN_PRICE=$_HERO_PLAN_PRICE,TEST_PLAN_PRICE=$_TEST_PLAN_PRICE,MAX_MEMBERS=$_MAX_MEMBERS,MINIMUM_PAYOUT_AMOUNT=$_MINIMUM_PAYOUT_AMOUNT,REWARD_CALCULATION_DAY=$_REWARD_CALCULATION_DAY,CSV_ENCODING=$_CSV_ENCODING" \
+            --set-env-vars="DATABASE_URL=$$DATABASE_URL_DEVELOPMENT,SECRET_KEY=$$SECRET_KEY_DEVELOPMENT" \
+            --memory 512Mi \
+            --cpu 1 \
+            --max-instances 2 \
+            --min-instances 0 \
+            --concurrency 20 \
+            --timeout 300 \
+            --port 8000
+          echo "✅ 開発環境デプロイ完了"
+        fi
+    secretEnv: ['DATABASE_URL_DEVELOPMENT', 'SECRET_KEY_DEVELOPMENT']
+
+  # 7. デプロイ後ヘルスチェック
+  - name: 'gcr.io/cloud-builders/curl'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🩺 デプロイ後ヘルスチェック実行"
+        
+        if [[ "$_ENVIRONMENT" == "production" ]]; then
+          SERVICE_URL="https://iroas-boss-v2-backend.run.app"
+        elif [[ "$_ENVIRONMENT" == "staging" ]]; then
+          SERVICE_URL="https://iroas-boss-v2-backend-staging.run.app"
+        elif [[ "$_ENVIRONMENT" == "development" ]]; then
+          SERVICE_URL="https://iroas-boss-v2-backend-dev.run.app"
+        fi
+        
+        echo "ヘルスチェック対象: $SERVICE_URL"
+        
+        max_attempts=30
+        attempt=1
+        
+        while [ $attempt -le $max_attempts ]; do
+          if curl -f -s "$SERVICE_URL/health"; then
+            echo "✅ $_ENVIRONMENT 環境ヘルスチェック成功"
+            break
+          else
+            echo "⏳ ヘルスチェック試行 $attempt/$max_attempts"
+            sleep 10
+            attempt=$((attempt + 1))
+          fi
+        done
+        
+        if [ $attempt -gt $max_attempts ]; then
+          echo "❌ $_ENVIRONMENT 環境ヘルスチェック失敗"
+          exit 1
+        fi
 
 # 環境変数の暗号化された値を使用
 availableSecrets:
   secretManager:
-  - versionName: projects/$PROJECT_ID/secrets/database-url-production/versions/latest
-    env: 'DATABASE_URL_PRODUCTION'
-  - versionName: projects/$PROJECT_ID/secrets/database-url-staging/versions/latest  
-    env: 'DATABASE_URL_STAGING'
-  - versionName: projects/$PROJECT_ID/secrets/redis-url-production/versions/latest
-    env: 'REDIS_URL_PRODUCTION'
-  - versionName: projects/$PROJECT_ID/secrets/redis-url-staging/versions/latest
-    env: 'REDIS_URL_STAGING'
-  - versionName: projects/$PROJECT_ID/secrets/secret-key-production/versions/latest
-    env: 'SECRET_KEY_PRODUCTION'
-  - versionName: projects/$PROJECT_ID/secrets/secret-key-staging/versions/latest
-    env: 'SECRET_KEY_STAGING'
+    # 本番環境シークレット
+    - versionName: projects/$PROJECT_ID/secrets/database-url-production/versions/latest
+      env: 'DATABASE_URL_PRODUCTION'
+    - versionName: projects/$PROJECT_ID/secrets/redis-url-production/versions/latest
+      env: 'REDIS_URL_PRODUCTION'
+    - versionName: projects/$PROJECT_ID/secrets/secret-key-production/versions/latest
+      env: 'SECRET_KEY_PRODUCTION'
+    - versionName: projects/$PROJECT_ID/secrets/univapay-api-key-production/versions/latest
+      env: 'UNIVAPAY_API_KEY_PRODUCTION'
+    - versionName: projects/$PROJECT_ID/secrets/gmo-bank-api-key-production/versions/latest
+      env: 'GMO_BANK_API_KEY_PRODUCTION'
+    - versionName: projects/$PROJECT_ID/secrets/csv-encryption-key-production/versions/latest
+      env: 'CSV_ENCRYPTION_KEY_PRODUCTION'
+    
+    # ステージング環境シークレット
+    - versionName: projects/$PROJECT_ID/secrets/database-url-staging/versions/latest  
+      env: 'DATABASE_URL_STAGING'
+    - versionName: projects/$PROJECT_ID/secrets/redis-url-staging/versions/latest
+      env: 'REDIS_URL_STAGING'
+    - versionName: projects/$PROJECT_ID/secrets/secret-key-staging/versions/latest
+      env: 'SECRET_KEY_STAGING'
+    - versionName: projects/$PROJECT_ID/secrets/univapay-api-key-staging/versions/latest
+      env: 'UNIVAPAY_API_KEY_STAGING'
+    - versionName: projects/$PROJECT_ID/secrets/gmo-bank-api-key-staging/versions/latest
+      env: 'GMO_BANK_API_KEY_STAGING'
+    - versionName: projects/$PROJECT_ID/secrets/csv-encryption-key-staging/versions/latest
+      env: 'CSV_ENCRYPTION_KEY_STAGING'
+    
+    # 開発環境シークレット
+    - versionName: projects/$PROJECT_ID/secrets/database-url-development/versions/latest
+      env: 'DATABASE_URL_DEVELOPMENT'
+    - versionName: projects/$PROJECT_ID/secrets/secret-key-development/versions/latest
+      env: 'SECRET_KEY_DEVELOPMENT'
 
 # ビルドオプション
 options:
@@ -85,10 +212,22 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 # タイムアウト設定
-timeout: 1200s
+timeout: 1800s
 
-# 置換変数
+# 置換変数（MLMビジネス要件準拠）
 substitutions:
   # デフォルト値設定
   _REGION: 'asia-northeast1'
   _SERVICE_NAME: 'iroas-boss-v2-backend'
+  _ENVIRONMENT: 'production'
+  
+  # MLMビジネス固有設定（要件定義書準拠）
+  _HERO_PLAN_PRICE: '10670'
+  _TEST_PLAN_PRICE: '9800'
+  _MAX_MEMBERS: '50'
+  _REWARD_CALCULATION_DAY: '25'
+  _MINIMUM_PAYOUT_AMOUNT: '5000'
+  _CSV_ENCODING: 'Shift-JIS'
+
+# ビルドログ設定
+logsBucket: 'gs://iroas-boss-v2-build-logs'
