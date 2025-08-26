@@ -19,6 +19,9 @@ from app.schemas.auth import (
 )
 from app.core.security import security, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
 from app.database import SessionLocal
+from app.services.security_service import security_service
+from app.services.audit_service import mlm_audit_service, AuditEvent, AuditEventType
+from app.services.notification_service import security_notification_service
 
 class AuthService:
     """認証サービス（MLMビジネス要件準拠）"""
@@ -37,7 +40,7 @@ class AuthService:
         user_agent: str,
         db: Session
     ) -> LoginResponse:
-        """ユーザー認証・ログイン処理"""
+        """ユーザー認証・ログイン処理（セキュリティ強化統合）"""
         
         # ユーザー取得
         user = db.query(User).filter(
@@ -48,6 +51,25 @@ class AuthService:
         ).first()
         
         if not user:
+            # 監査ログ記録
+            audit_event = AuditEvent(
+                event_type=AuditEventType.LOGIN_FAILED,
+                user_id=None,
+                session_id=None,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                resource="/auth/login",
+                action="login",
+                details={
+                    "attempted_username": login_data.username,
+                    "failure_reason": "user_not_found"
+                },
+                success=False,
+                timestamp=datetime.utcnow(),
+                risk_level="medium"
+            )
+            await mlm_audit_service.log_event(audit_event, db)
+            
             await self._log_access(None, "login_failed", ip_address, user_agent, False, "ユーザーが存在しません", db)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -75,6 +97,48 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_423_LOCKED,
                 detail="アカウントがロックされています。しばらく待ってから再試行してください。"
+            )
+        
+        # セキュリティ行動分析
+        security_analysis = await security_service.analyze_login_behavior(
+            user.id, ip_address, user_agent, db
+        )
+        
+        # 高リスクログインのブロック
+        if security_analysis["block_login"]:
+            audit_event = AuditEvent(
+                event_type=AuditEventType.SUSPICIOUS_ACTIVITY,
+                user_id=user.id,
+                session_id=None,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                resource="/auth/login",
+                action="login_blocked",
+                details={
+                    "risk_score": security_analysis["risk_score"],
+                    "risk_factors": security_analysis["risk_factors"],
+                    "security_analysis": security_analysis
+                },
+                success=False,
+                timestamp=datetime.utcnow(),
+                risk_level="critical"
+            )
+            await mlm_audit_service.log_event(audit_event, db)
+            
+            # 緊急セキュリティアラート送信
+            await security_notification_service.send_critical_security_alert(
+                event_type="high_risk_login_blocked",
+                user=user,
+                details={
+                    "risk_score": security_analysis["risk_score"],
+                    "risk_factors": security_analysis["risk_factors"]
+                },
+                ip_address=ip_address
+            )
+            
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="セキュリティ上の理由によりログインがブロックされました。管理者にお問い合わせください。"
             )
         
         # パスワード検証
@@ -145,6 +209,52 @@ class AuthService:
         user.last_login_at = datetime.utcnow()
         user.last_login_ip = ip_address
         db.commit()
+        
+        # 監査ログ記録（成功）
+        audit_event = AuditEvent(
+            event_type=AuditEventType.LOGIN_SUCCESS,
+            user_id=user.id,
+            session_id=session.session_id,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            resource="/auth/login",
+            action="login",
+            details={
+                "username": user.username,
+                "role": user.role.value,
+                "mfa_used": user.mfa_enabled,
+                "remember_me": login_data.remember_me,
+                "security_analysis": security_analysis
+            },
+            success=True,
+            timestamp=datetime.utcnow(),
+            risk_level="low" if security_analysis["risk_score"] < 3 else "medium"
+        )
+        await mlm_audit_service.log_event(audit_event, db)
+        
+        # 追加認証が必要な場合のユーザー通知
+        if security_analysis["require_additional_auth"]:
+            await security_notification_service.send_user_security_notification(
+                user=user,
+                notification_type="suspicious_activity",
+                details={
+                    "ip_address": ip_address,
+                    "risk_factors": security_analysis["risk_factors"],
+                    "recommendation": "アカウントのセキュリティを確認してください"
+                }
+            )
+        
+        # 新しいデバイスからのログイン通知
+        if "新しいデバイス・ブラウザからのアクセス" in security_analysis.get("risk_factors", []):
+            await security_notification_service.send_user_security_notification(
+                user=user,
+                notification_type="new_device_login",
+                details={
+                    "ip_address": ip_address,
+                    "user_agent": user_agent,
+                    "login_time": datetime.utcnow().isoformat()
+                }
+            )
         
         # アクセスログ記録
         await self._log_access(user.id, "login_success", ip_address, user_agent, True, "ログイン成功", db)
