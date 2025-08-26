@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P-007 アクティビティログ - IROAS BOSS v2</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* エンタープライズテーマ - CSS変数定義 */
+        :root {
+            /* プライマリカラー */
+            --primary: #1e3a8a;
+            --primary-hover: #1e40af;
+            --primary-light: #3b82f6;
+
+            /* セカンダリカラー */
+            --secondary: #3b82f6;
+            --secondary-hover: #2563eb;
+            --secondary-light: #60a5fa;
+
+            /* ニュートラルカラー */
+            --background: #f1f5f9;
+            --surface: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --border-light: #e2e8f0;
+
+            /* セマンティックカラー */
+            --success: #10b981;
+            --success-bg: #f0fdf4;
+            --warning: #f59e0b;
+            --warning-bg: #fffbeb;
+            --error: #ef4444;
+            --error-bg: #fef2f2;
+            --info: #3b82f6;
+            --info-bg: #eff6ff;
+
+            /* スペーシング */
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+
+            /* フォント */
+            --font-primary: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+            --text-3xl: 1.875rem;
+            --text-2xl: 1.5rem;
+            --text-xl: 1.25rem;
+            --text-lg: 1.125rem;
+            --text-base: 1rem;
+            --text-sm: 0.875rem;
+            --text-xs: 0.75rem;
+
+            /* トランジション */
+            --transition-base: all 0.2s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* レイアウト */
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* サイドバー */
+        .sidebar {
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            width: 280px;
+            height: 100vh;
+            padding: var(--spacing-lg);
+            overflow-y: auto;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+
+        .sidebar-header {
+            margin-bottom: var(--spacing-xl);
+            padding-bottom: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .logo {
+            font-size: var(--text-xl);
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .menu-section {
+            font-size: var(--text-xs);
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: var(--spacing-xl) 0 var(--spacing-sm) 0;
+        }
+
+        .menu-item {
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .menu-item a {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition-base);
+        }
+
+        .menu-item a:hover {
+            background: var(--border-light);
+            color: var(--text-primary);
+        }
+
+        .menu-item a.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .menu-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* メインコンテンツ */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: var(--spacing-xl);
+        }
+
+        /* ページヘッダー */
+        .page-header {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .page-title {
+            font-size: var(--text-3xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .page-subtitle {
+            font-size: var(--text-lg);
+            color: var(--text-secondary);
+        }
+
+        /* カード */
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            transition: var(--transition-base);
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            margin-bottom: var(--spacing-md);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: var(--text-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* フィルター */
+        .filter-section {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: var(--spacing-md);
+            align-items: end;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            display: block;
+            font-size: var(--text-sm);
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: var(--text-base);
+            background: var(--surface);
+            transition: var(--transition-base);
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        }
+
+        /* ボタン */
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: var(--text-base);
+            cursor: pointer;
+            transition: var(--transition-base);
+            border: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-icon {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            padding: 8px;
+        }
+
+        .btn-icon:hover {
+            background: var(--border-light);
+            color: var(--text-primary);
+        }
+
+        /* ログテーブル */
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface);
+        }
+
+        .log-table th,
+        .log-table td {
+            padding: var(--spacing-md);
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .log-table th {
+            font-weight: 600;
+            color: var(--text-primary);
+            background: var(--background);
+            font-size: var(--text-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .log-table td {
+            color: var(--text-secondary);
+            font-size: var(--text-sm);
+        }
+
+        .log-table tbody tr:hover {
+            background: var(--background);
+        }
+
+        /* ログタイプバッジ */
+        .log-type-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: var(--text-xs);
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .log-type-member { 
+            background: var(--info-bg); 
+            color: var(--info); 
+        }
+        .log-type-payment { 
+            background: var(--success-bg); 
+            color: var(--success); 
+        }
+        .log-type-reward { 
+            background: var(--warning-bg); 
+            color: var(--warning); 
+        }
+        .log-type-system { 
+            background: var(--border-light); 
+            color: var(--text-muted); 
+        }
+        .log-type-export { 
+            background: var(--primary);
+            color: white;
+        }
+
+        /* ユーザー表示 */
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .user-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--text-xs);
+            font-weight: 600;
+        }
+
+        /* タイムスタンプ */
+        .timestamp {
+            color: var(--text-muted);
+            font-size: var(--text-xs);
+        }
+
+        /* 詳細表示ボタン */
+        .detail-btn {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: var(--text-xs);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--primary);
+            transition: var(--transition-base);
+        }
+
+        .detail-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* ページネーション */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-xl);
+        }
+
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-secondary);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: var(--transition-base);
+        }
+
+        .pagination button:hover {
+            background: var(--border-light);
+        }
+
+        .pagination button.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                z-index: 1000;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: var(--spacing-md);
+            }
+
+            .filter-row {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-sm);
+            }
+
+            .log-table {
+                font-size: var(--text-xs);
+            }
+
+            .log-table th,
+            .log-table td {
+                padding: var(--spacing-sm);
+            }
+        }
+
+        /* モーダル */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: var(--spacing-xl);
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .modal-title {
+            font-size: var(--text-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: var(--text-lg);
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 4px;
+        }
+
+        .close-btn:hover {
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- サイドバー -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-crown"></i>
+                    IROAS BOSS v2
+                </div>
+            </div>
+            <nav>
+                <ul class="sidebar-menu">
+                    <li class="menu-section">メイン機能</li>
+                    <li class="menu-item">
+                        <a href="/"><i class="fas fa-tachometer-alt"></i>ダッシュボード</a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="/members"><i class="fas fa-users"></i>会員管理</a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="/organization"><i class="fas fa-sitemap"></i>組織図</a>
+                    </li>
+
+                    <li class="menu-section">決済・報酬</li>
+                    <li class="menu-item">
+                        <a href="/payments"><i class="fas fa-credit-card"></i>決済管理</a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="/rewards"><i class="fas fa-calculator"></i>報酬計算</a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="/payouts"><i class="fas fa-university"></i>支払管理</a>
+                    </li>
+
+                    <li class="menu-section">システム</li>
+                    <li class="menu-item">
+                        <a href="/activity" class="active"><i class="fas fa-history"></i>アクティビティログ</a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="/settings"><i class="fas fa-cogs"></i>設定</a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="/data"><i class="fas fa-database"></i>データ入出力</a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- メインコンテンツ -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-history"></i>
+                    アクティビティログ
+                </h1>
+                <p class="page-subtitle">システムで実行された全操作の履歴を時系列で確認できます</p>
+            </div>
+
+            <!-- フィルター -->
+            <div class="filter-section">
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label class="form-label">開始日</label>
+                        <input type="date" class="form-input" id="startDate" value="2025-08-01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">終了日</label>
+                        <input type="date" class="form-input" id="endDate" value="2025-08-26">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">操作種別</label>
+                        <select class="form-select" id="actionType">
+                            <option value="">全て</option>
+                            <option value="member">会員管理</option>
+                            <option value="payment">決済処理</option>
+                            <option value="reward">報酬計算</option>
+                            <option value="export">CSV出力</option>
+                            <option value="system">システム</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" onclick="filterLogs()">
+                            <i class="fas fa-search"></i>
+                            検索
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ログ一覧 -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">操作履歴一覧</h2>
+                    <div>
+                        <button class="btn btn-icon" onclick="exportLogs()" title="CSV出力">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="btn btn-icon" onclick="refreshLogs()" title="更新">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th>日時</th>
+                            <th>操作種別</th>
+                            <th>操作内容</th>
+                            <th>実行者</th>
+                            <th>対象</th>
+                            <th>詳細</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logTableBody">
+                        <tr>
+                            <td>
+                                <div class="timestamp">2025-08-26 14:32:15</div>
+                            </td>
+                            <td>
+                                <span class="log-type-badge log-type-export">CSV出力</span>
+                            </td>
+                            <td>GMOネットバンク振込用CSV出力</td>
+                            <td>
+                                <div class="user-info">
+                                    <div class="user-avatar">管</div>
+                                    管理者
+                                </div>
+                            </td>
+                            <td>報酬支払: 12件</td>
+                            <td>
+                                <a href="#" class="detail-btn" onclick="showLogDetail('log001')">詳細</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="timestamp">2025-08-26 14:18:42</div>
+                            </td>
+                            <td>
+                                <span class="log-type-badge log-type-reward">報酬計算</span>
+                            </td>
+                            <td>2025年8月報酬計算実行</td>
+                            <td>
+                                <div class="user-info">
+                                    <div class="user-avatar">管</div>
+                                    管理者
+                                </div>
+                            </td>
+                            <td>対象者: 48名</td>
+                            <td>
+                                <a href="#" class="detail-btn" onclick="showLogDetail('log002')">詳細</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="timestamp">2025-08-26 10:45:33</div>
+                            </td>
+                            <td>
+                                <span class="log-type-badge log-type-payment">決済処理</span>
+                            </td>
+                            <td>決済結果CSV取込処理</td>
+                            <td>
+                                <div class="user-info">
+                                    <div class="user-avatar">管</div>
+                                    管理者
+                                </div>
+                            </td>
+                            <td>処理件数: 47件</td>
+                            <td>
+                                <a href="#" class="detail-btn" onclick="showLogDetail('log003')">詳細</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="timestamp">2025-08-25 16:22:18</div>
+                            </td>
+                            <td>
+                                <span class="log-type-badge log-type-member">会員管理</span>
+                            </td>
+                            <td>会員情報更新</td>
+                            <td>
+                                <div class="user-info">
+                                    <div class="user-avatar">管</div>
+                                    管理者
+                                </div>
+                            </td>
+                            <td>会員番号: 0000023</td>
+                            <td>
+                                <a href="#" class="detail-btn" onclick="showLogDetail('log004')">詳細</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="timestamp">2025-08-25 11:15:07</div>
+                            </td>
+                            <td>
+                                <span class="log-type-badge log-type-export">CSV出力</span>
+                            </td>
+                            <td>カード決済用CSV出力</td>
+                            <td>
+                                <div class="user-info">
+                                    <div class="user-avatar">管</div>
+                                    管理者
+                                </div>
+                            </td>
+                            <td>対象者: 42名</td>
+                            <td>
+                                <a href="#" class="detail-btn" onclick="showLogDetail('log005')">詳細</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="timestamp">2025-08-24 09:30:45</div>
+                            </td>
+                            <td>
+                                <span class="log-type-badge log-type-system">システム</span>
+                            </td>
+                            <td>データベースバックアップ実行</td>
+                            <td>
+                                <div class="user-info">
+                                    <div class="user-avatar">S</div>
+                                    システム
+                                </div>
+                            </td>
+                            <td>自動バックアップ</td>
+                            <td>
+                                <a href="#" class="detail-btn" onclick="showLogDetail('log006')">詳細</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="timestamp">2025-08-23 15:42:12</div>
+                            </td>
+                            <td>
+                                <span class="log-type-badge log-type-member">会員管理</span>
+                            </td>
+                            <td>新規会員登録</td>
+                            <td>
+                                <div class="user-info">
+                                    <div class="user-avatar">管</div>
+                                    管理者
+                                </div>
+                            </td>
+                            <td>会員番号: 0000050</td>
+                            <td>
+                                <a href="#" class="detail-btn" onclick="showLogDetail('log007')">詳細</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="timestamp">2025-08-22 13:28:56</div>
+                            </td>
+                            <td>
+                                <span class="log-type-badge log-type-payment">決済処理</span>
+                            </td>
+                            <td>手動決済記録（銀行振込）</td>
+                            <td>
+                                <div class="user-info">
+                                    <div class="user-avatar">管</div>
+                                    管理者
+                                </div>
+                            </td>
+                            <td>会員番号: 0000012</td>
+                            <td>
+                                <a href="#" class="detail-btn" onclick="showLogDetail('log008')">詳細</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- ページネーション -->
+                <div class="pagination">
+                    <button onclick="changePage(-1)" disabled>
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button class="active">1</button>
+                    <button onclick="changePage(2)">2</button>
+                    <button onclick="changePage(3)">3</button>
+                    <button onclick="changePage(1)">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 詳細表示モーダル -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">操作詳細</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modalBody">
+                <!-- 詳細内容がここに表示される -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // サンプルデータ
+        const logDetails = {
+            log001: {
+                title: 'GMOネットバンク振込用CSV出力',
+                timestamp: '2025-08-26 14:32:15',
+                user: '管理者',
+                details: `
+                    <p><strong>処理概要:</strong> 2025年8月分報酬支払用のGMOネットバンク振込CSVファイルを出力しました。</p>
+                    <p><strong>対象件数:</strong> 12件</p>
+                    <p><strong>支払総額:</strong> ¥1,245,600</p>
+                    <p><strong>出力ファイル名:</strong> GMO_202508_rewards.csv</p>
+                    <p><strong>処理時間:</strong> 0.8秒</p>
+                    <p><strong>ステータス:</strong> <span style="color: var(--success);">正常完了</span></p>
+                `
+            },
+            log002: {
+                title: '2025年8月報酬計算実行',
+                timestamp: '2025-08-26 14:18:42',
+                user: '管理者',
+                details: `
+                    <p><strong>処理概要:</strong> 2025年8月分の全会員の報酬計算を実行しました。</p>
+                    <p><strong>対象会員数:</strong> 48名</p>
+                    <p><strong>計算種別:</strong></p>
+                    <ul>
+                        <li>デイリーボーナス: 48件</li>
+                        <li>タイトルボーナス: 15件</li>
+                        <li>リファラルボーナス: 23件</li>
+                        <li>パワーボーナス: 8件</li>
+                        <li>メンテナンスボーナス: 32件</li>
+                        <li>セールスアクティビティボーナス: 12件</li>
+                        <li>ロイヤルファミリーボーナス: 3件</li>
+                    </ul>
+                    <p><strong>総支払額:</strong> ¥1,245,600</p>
+                    <p><strong>5,000円以上対象者:</strong> 12名</p>
+                    <p><strong>繰越対象者:</strong> 36名</p>
+                    <p><strong>処理時間:</strong> 2.3秒</p>
+                    <p><strong>ステータス:</strong> <span style="color: var(--success);">正常完了</span></p>
+                `
+            },
+            log003: {
+                title: '決済結果CSV取込処理',
+                timestamp: '2025-08-26 10:45:33',
+                user: '管理者',
+                details: `
+                    <p><strong>処理概要:</strong> Univapayからの決済結果CSVファイルを取り込みました。</p>
+                    <p><strong>取込ファイル名:</strong> payment_result_202508.csv</p>
+                    <p><strong>処理件数:</strong> 47件</p>
+                    <p><strong>成功:</strong> 45件</p>
+                    <p><strong>失敗:</strong> 2件</p>
+                    <p><strong>失敗詳細:</strong></p>
+                    <ul>
+                        <li>会員番号: 0000034 - カード期限切れ</li>
+                        <li>会員番号: 0000041 - 残高不足</li>
+                    </ul>
+                    <p><strong>処理時間:</strong> 1.2秒</p>
+                    <p><strong>ステータス:</strong> <span style="color: var(--warning);">部分成功</span></p>
+                `
+            },
+            log004: {
+                title: '会員情報更新',
+                timestamp: '2025-08-25 16:22:18',
+                user: '管理者',
+                details: `
+                    <p><strong>処理概要:</strong> 会員情報の更新を実行しました。</p>
+                    <p><strong>対象会員:</strong> 0000023 - 田中 太郎</p>
+                    <p><strong>更新項目:</strong></p>
+                    <ul>
+                        <li>メールアドレス: tanaka.old@example.com → tanaka.new@example.com</li>
+                        <li>住所: 東京都渋谷区... → 東京都新宿区...</li>
+                        <li>電話番号: 090-1234-5678 → 090-1234-9999</li>
+                    </ul>
+                    <p><strong>処理時間:</strong> 0.3秒</p>
+                    <p><strong>ステータス:</strong> <span style="color: var(--success);">正常完了</span></p>
+                `
+            },
+            log005: {
+                title: 'カード決済用CSV出力',
+                timestamp: '2025-08-25 11:15:07',
+                user: '管理者',
+                details: `
+                    <p><strong>処理概要:</strong> 2025年8月分カード決済用のUnivapay CSVファイルを出力しました。</p>
+                    <p><strong>対象者数:</strong> 42名</p>
+                    <p><strong>決済総額:</strong> ¥448,140</p>
+                    <p><strong>内訳:</strong></p>
+                    <ul>
+                        <li>ヒーロープラン: 38名 (¥405,460)</li>
+                        <li>テストプラン: 4名 (¥39,200)</li>
+                    </ul>
+                    <p><strong>出力ファイル名:</strong> card_payment_202508.csv</p>
+                    <p><strong>エンコーディング:</strong> Shift-JIS</p>
+                    <p><strong>処理時間:</strong> 0.6秒</p>
+                    <p><strong>ステータス:</strong> <span style="color: var(--success);">正常完了</span></p>
+                `
+            },
+            log006: {
+                title: 'データベースバックアップ実行',
+                timestamp: '2025-08-24 09:30:45',
+                user: 'システム',
+                details: `
+                    <p><strong>処理概要:</strong> 日次自動バックアップを実行しました。</p>
+                    <p><strong>バックアップファイル:</strong> boss_backup_20250824_093045.sql</p>
+                    <p><strong>ファイルサイズ:</strong> 2.4MB</p>
+                    <p><strong>保存場所:</strong> /backups/daily/</p>
+                    <p><strong>保存期間:</strong> 30日間</p>
+                    <p><strong>圧縮:</strong> gzip</p>
+                    <p><strong>処理時間:</strong> 15.7秒</p>
+                    <p><strong>ステータス:</strong> <span style="color: var(--success);">正常完了</span></p>
+                `
+            },
+            log007: {
+                title: '新規会員登録',
+                timestamp: '2025-08-23 15:42:12',
+                user: '管理者',
+                details: `
+                    <p><strong>処理概要:</strong> 新規会員の登録を実行しました。</p>
+                    <p><strong>会員情報:</strong></p>
+                    <ul>
+                        <li>会員番号: 0000050</li>
+                        <li>氏名: 佐藤 花子</li>
+                        <li>プラン: ヒーロープラン</li>
+                        <li>決済方法: カード決済</li>
+                        <li>スポンサー: 0000012 - 鈴木 一郎</li>
+                    </ul>
+                    <p><strong>組織配置:</strong> 自動配置完了</p>
+                    <p><strong>処理時間:</strong> 0.5秒</p>
+                    <p><strong>ステータス:</strong> <span style="color: var(--success);">正常完了</span></p>
+                `
+            },
+            log008: {
+                title: '手動決済記録（銀行振込）',
+                timestamp: '2025-08-22 13:28:56',
+                user: '管理者',
+                details: `
+                    <p><strong>処理概要:</strong> 銀行振込による手動決済を記録しました。</p>
+                    <p><strong>対象会員:</strong> 0000012 - 鈴木 一郎</p>
+                    <p><strong>決済情報:</strong></p>
+                    <ul>
+                        <li>金額: ¥10,670 (ヒーロープラン)</li>
+                        <li>決済日: 2025-08-22</li>
+                        <li>振込者名: スズキイチロウ</li>
+                        <li>確認方法: 通帳記録確認</li>
+                    </ul>
+                    <p><strong>処理時間:</strong> 0.2秒</p>
+                    <p><strong>ステータス:</strong> <span style="color: var(--success);">正常完了</span></p>
+                `
+            }
+        };
+
+        // フィルター機能
+        function filterLogs() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const actionType = document.getElementById('actionType').value;
+            
+            console.log('フィルター適用:', { startDate, endDate, actionType });
+            
+            // 実際の実装では、ここでAPIを呼び出してフィルタリングされたログを取得
+            alert('フィルタリング機能が実行されました。\n実装時にはAPIと連携します。');
+        }
+
+        // ログ更新
+        function refreshLogs() {
+            console.log('ログを更新中...');
+            alert('ログを更新しました。');
+        }
+
+        // CSV出力
+        function exportLogs() {
+            console.log('ログをCSV出力中...');
+            alert('ログのCSV出力が開始されました。\nファイルのダウンロードが始まります。');
+        }
+
+        // ページネーション
+        function changePage(page) {
+            console.log('ページ変更:', page);
+            // 実際の実装では、ここでAPIを呼び出してページデータを取得
+        }
+
+        // 詳細表示
+        function showLogDetail(logId) {
+            const modal = document.getElementById('detailModal');
+            const modalBody = document.getElementById('modalBody');
+            const detail = logDetails[logId];
+            
+            if (detail) {
+                modalBody.innerHTML = `
+                    <div style="margin-bottom: var(--spacing-lg);">
+                        <h4 style="color: var(--text-primary); margin-bottom: var(--spacing-sm);">${detail.title}</h4>
+                        <p style="color: var(--text-muted); font-size: var(--text-sm);">実行日時: ${detail.timestamp}</p>
+                        <p style="color: var(--text-muted); font-size: var(--text-sm);">実行者: ${detail.user}</p>
+                    </div>
+                    <div style="line-height: 1.6;">
+                        ${detail.details}
+                    </div>
+                `;
+                
+                modal.classList.add('show');
+            }
+        }
+
+        // モーダルクローズ
+        function closeModal() {
+            const modal = document.getElementById('detailModal');
+            modal.classList.remove('show');
+        }
+
+        // モーダル外クリックでクローズ
+        document.getElementById('detailModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // キーボードショートカット
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // 初期化処理
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('P-007 アクティビティログページが初期化されました');
+        });
+    </script>
+
+    <!--
+    【CF_06引き継ぎ情報】
+    UI要件: アクティビティログの時系列表示、日付・操作種別フィルタリング、詳細確認
+    必要API: 
+    - GET /api/activity/logs - ログ一覧取得（ページング付き）
+    - GET /api/activity/logs/filter - 条件指定でログ検索
+    - GET /api/activity/logs/{log_id} - ログ詳細取得
+    入力データ: { 
+        page?: number, 
+        size?: number,
+        date_from?: string,
+        date_to?: string,
+        type?: string 
+    }
+    出力データ: { 
+        logs: Array<{
+            id: number,
+            action_type: string,
+            action_detail: string,
+            user_id: string,
+            user_name: string,
+            target: string,
+            created_at: string
+        }>,
+        total: number,
+        page: number,
+        total_pages: number
+    }
+    UI文脈: ログの時系列表示、フィルタリング検索、モーダルでの詳細表示、CSV出力
+    特記事項: ログの記録対象は会員登録/編集/退会、CSV出力、決済処理、報酬計算、支払処理、設定変更など、ページネーション対応、リアルタイム更新機能
+    -->
+</body>
+</html>

@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P-006: 報酬支払管理 - IROAS BOSS v2</title>
+    <link href="https://cdn.jsdelivr.net/npm/feather-icons@4.29.0/dist/feather.min.css" rel="stylesheet">
+    <style>
+        :root {
+            /* プライマリカラー */
+            --primary: #1e3a8a;
+            --primary-hover: #1e40af;
+            --primary-light: #3b82f6;
+            
+            /* セカンダリカラー */
+            --secondary: #3b82f6;
+            --secondary-hover: #2563eb;
+            --secondary-light: #60a5fa;
+            
+            /* ニュートラルカラー */
+            --background: #f1f5f9;
+            --surface: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --border-light: #e2e8f0;
+            
+            /* セマンティックカラー */
+            --success: #10b981;
+            --success-bg: #f0fdf4;
+            --warning: #f59e0b;
+            --warning-bg: #fffbeb;
+            --error: #ef4444;
+            --error-bg: #fef2f2;
+            --info: #3b82f6;
+            --info-bg: #eff6ff;
+            
+            /* フォント */
+            --font-primary: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+            
+            /* フォントサイズ */
+            --text-3xl: 1.875rem;
+            --text-2xl: 1.5rem;
+            --text-xl: 1.25rem;
+            --text-lg: 1.125rem;
+            --text-base: 1rem;
+            --text-sm: 0.875rem;
+            --text-xs: 0.75rem;
+            
+            /* スペーシング */
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            --spacing-3xl: 4rem;
+            
+            /* トランジション */
+            --transition-fast: all 0.15s ease;
+            --transition-base: all 0.2s ease;
+            --transition-slow: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* サイドバー */
+        .sidebar {
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            width: 280px;
+            padding: var(--spacing-lg);
+            overflow-y: auto;
+        }
+
+        .sidebar-brand {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .brand-title {
+            font-size: var(--text-xl);
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .menu-section {
+            font-size: var(--text-xs);
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: var(--spacing-xl) 0 var(--spacing-sm) 0;
+        }
+
+        .menu-item {
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .menu-item a {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition-base);
+        }
+
+        .menu-item a:hover {
+            background: var(--border-light);
+            color: var(--text-primary);
+        }
+
+        .menu-item a.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* メインコンテンツ */
+        .main-content {
+            flex: 1;
+            padding: var(--spacing-xl);
+            overflow-y: auto;
+        }
+
+        .page-header {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .page-title {
+            font-size: var(--text-3xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .page-subtitle {
+            font-size: var(--text-base);
+            color: var(--text-secondary);
+        }
+
+        /* カード */
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            transition: var(--transition-base);
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            margin-bottom: var(--spacing-md);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: var(--text-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* ボタン */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: var(--text-base);
+            cursor: pointer;
+            transition: var(--transition-base);
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #0d9488;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        /* グリッド */
+        .grid {
+            display: grid;
+            gap: var(--spacing-lg);
+        }
+
+        .grid-cols-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .grid-cols-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        /* テーブル */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface);
+        }
+
+        .table th,
+        .table td {
+            padding: var(--spacing-md);
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .table th {
+            background: var(--background);
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: var(--text-sm);
+        }
+
+        .table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .table tr:hover {
+            background: rgba(30, 58, 138, 0.05);
+        }
+
+        /* ステータス */
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: 4px;
+            font-size: var(--text-xs);
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: var(--warning-bg);
+            color: var(--warning);
+        }
+
+        .status-confirmed {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+
+        .status-carryover {
+            background: var(--info-bg);
+            color: var(--info);
+        }
+
+        /* アラート */
+        .alert {
+            padding: var(--spacing-md);
+            border-radius: 8px;
+            margin-bottom: var(--spacing-md);
+            font-size: var(--text-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .alert-info {
+            background: var(--info-bg);
+            color: var(--info);
+            border: 1px solid var(--info);
+        }
+
+        .alert-warning {
+            background: var(--warning-bg);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+
+        .alert-success {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        /* フォーム */
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .form-label {
+            display: block;
+            font-size: var(--text-sm);
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: var(--text-base);
+            background: var(--surface);
+            transition: var(--transition-base);
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        }
+
+        /* 数値表示 */
+        .amount {
+            font-family: var(--font-mono);
+            font-weight: 600;
+        }
+
+        .amount-large {
+            font-size: var(--text-lg);
+        }
+
+        /* 統計カード */
+        .stat-card {
+            text-align: center;
+            padding: var(--spacing-xl);
+        }
+
+        .stat-value {
+            font-size: var(--text-3xl);
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .stat-label {
+            font-size: var(--text-sm);
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+            }
+
+            .grid-cols-2,
+            .grid-cols-3 {
+                grid-template-columns: 1fr;
+            }
+
+            .main-content {
+                padding: var(--spacing-md);
+            }
+        }
+
+        /* アイコン */
+        .icon {
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- サイドバー -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-title">IROAS BOSS v2</div>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li class="menu-section">メイン機能</li>
+                <li class="menu-item">
+                    <a href="/dashboard">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                        </svg>
+                        ダッシュボード
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/members">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="m22 21-3-3m0 0-3-3m3 3 3-3m-3 3-3 3"></path>
+                        </svg>
+                        会員管理
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/organization">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                        </svg>
+                        組織図
+                    </a>
+                </li>
+                
+                <li class="menu-section">決済・報酬</li>
+                <li class="menu-item">
+                    <a href="/payments">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                            <line x1="1" y1="10" x2="23" y2="10"></line>
+                        </svg>
+                        決済管理
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/rewards">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                        報酬計算
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/payouts" class="active">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <rect x="1" y="3" width="15" height="13"></rect>
+                            <path d="m16 8 2 2-2 2"></path>
+                            <path d="M21 12H18"></path>
+                        </svg>
+                        支払管理
+                    </a>
+                </li>
+                
+                <li class="menu-section">システム</li>
+                <li class="menu-item">
+                    <a href="/activity">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                        </svg>
+                        アクティビティログ
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/settings">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        設定
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/data">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                        </svg>
+                        データ入出力
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- メインコンテンツ -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">報酬支払管理</h1>
+                <p class="page-subtitle">GMOネットバンク振込CSV生成と支払履歴管理、繰越管理</p>
+            </div>
+
+            <!-- 支払概要カード -->
+            <div class="grid grid-cols-3">
+                <div class="card stat-card">
+                    <div class="stat-value amount">¥1,250,000</div>
+                    <div class="stat-label">今月支払総額</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value">23名</div>
+                    <div class="stat-label">支払対象者数（5,000円以上）</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value amount">¥85,400</div>
+                    <div class="stat-label">繰越金額（5,000円未満）</div>
+                </div>
+            </div>
+
+            <!-- 支払処理アクション -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">支払処理</h2>
+                </div>
+                <div class="alert alert-info">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="m9 12 2 2 4-4"></path>
+                    </svg>
+                    最低支払金額：5,000円以上の報酬が支払対象となります。5,000円未満は翌月に繰り越されます。
+                </div>
+                
+                <div style="display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
+                    <button class="btn btn-primary" onclick="showPaymentSummary()">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <path d="m14 2 6 6"></path>
+                            <path d="M16 13H8"></path>
+                            <path d="M16 17H8"></path>
+                            <path d="M10 9H8"></path>
+                        </svg>
+                        支払対象者確認
+                    </button>
+                    <button class="btn btn-success" onclick="exportGMOCSV()">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7,10 12,15 17,10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        GMO振込CSV出力
+                    </button>
+                    <button class="btn btn-warning" onclick="showCarryoverList()">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <polyline points="23,6 13.5,15.5 8.5,10.5 1,18"></polyline>
+                            <polyline points="17,6 23,6 23,12"></polyline>
+                        </svg>
+                        繰越金額確認
+                    </button>
+                </div>
+            </div>
+
+            <!-- 支払対象者一覧 -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">支払対象者一覧（5,000円以上）</h2>
+                    <div style="display: flex; gap: var(--spacing-sm);">
+                        <select class="form-select" style="width: auto;" onchange="filterPaymentTargets(this.value)">
+                            <option value="all">全ステータス</option>
+                            <option value="pending">支払予定</option>
+                            <option value="confirmed">支払確定</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>会員番号</th>
+                                <th>氏名</th>
+                                <th>プラン</th>
+                                <th>報酬総額</th>
+                                <th>前月繰越</th>
+                                <th>支払額</th>
+                                <th>振込先銀行</th>
+                                <th>ステータス</th>
+                                <th>アクション</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentTargetsTable">
+                            <tr>
+                                <td><span class="amount">0000001</span></td>
+                                <td>田中 太郎</td>
+                                <td>ヒーロープラン</td>
+                                <td><span class="amount">¥85,400</span></td>
+                                <td><span class="amount">¥2,800</span></td>
+                                <td><span class="amount amount-large">¥88,200</span></td>
+                                <td>三井住友銀行</td>
+                                <td><span class="status status-pending">支払予定</span></td>
+                                <td>
+                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: var(--text-sm);" onclick="confirmPayment(1)">支払確定</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><span class="amount">0000003</span></td>
+                                <td>佐藤 花子</td>
+                                <td>ヒーロープラン</td>
+                                <td><span class="amount">¥156,750</span></td>
+                                <td><span class="amount">¥0</span></td>
+                                <td><span class="amount amount-large">¥156,750</span></td>
+                                <td>みずほ銀行</td>
+                                <td><span class="status status-confirmed">支払確定</span></td>
+                                <td>
+                                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: var(--text-sm);" onclick="viewPaymentDetail(3)">詳細</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><span class="amount">0000007</span></td>
+                                <td>山田 次郎</td>
+                                <td>テストプラン</td>
+                                <td><span class="amount">¥45,200</span></td>
+                                <td><span class="amount">¥3,600</span></td>
+                                <td><span class="amount amount-large">¥48,800</span></td>
+                                <td>ゆうちょ銀行</td>
+                                <td><span class="status status-pending">支払予定</span></td>
+                                <td>
+                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: var(--text-sm);" onclick="confirmPayment(7)">支払確定</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><span class="amount">0000012</span></td>
+                                <td>鈴木 美咲</td>
+                                <td>ヒーロープラン</td>
+                                <td><span class="amount">¥27,300</span></td>
+                                <td><span class="amount">¥1,200</span></td>
+                                <td><span class="amount amount-large">¥28,500</span></td>
+                                <td>りそな銀行</td>
+                                <td><span class="status status-pending">支払予定</span></td>
+                                <td>
+                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: var(--text-sm);" onclick="confirmPayment(12)">支払確定</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><span class="amount">0000015</span></td>
+                                <td>高橋 明</td>
+                                <td>ヒーロープラン</td>
+                                <td><span class="amount">¥89,600</span></td>
+                                <td><span class="amount">¥4,100</span></td>
+                                <td><span class="amount amount-large">¥93,700</span></td>
+                                <td>三菱UFJ銀行</td>
+                                <td><span class="status status-confirmed">支払確定</span></td>
+                                <td>
+                                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: var(--text-sm);" onclick="viewPaymentDetail(15)">詳細</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 繰越金額一覧 -->
+            <div class="card" id="carryoverSection" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">繰越金額一覧（5,000円未満）</h2>
+                </div>
+
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>会員番号</th>
+                                <th>氏名</th>
+                                <th>プラン</th>
+                                <th>今月報酬</th>
+                                <th>前月繰越</th>
+                                <th>合計金額</th>
+                                <th>繰越理由</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="amount">0000002</span></td>
+                                <td>伊藤 和子</td>
+                                <td>テストプラン</td>
+                                <td><span class="amount">¥2,800</span></td>
+                                <td><span class="amount">¥1,600</span></td>
+                                <td><span class="amount">¥4,400</span></td>
+                                <td><span class="status status-carryover">最低支払額未満</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="amount">0000005</span></td>
+                                <td>渡辺 健一</td>
+                                <td>ヒーロープラン</td>
+                                <td><span class="amount">¥3,200</span></td>
+                                <td><span class="amount">¥0</span></td>
+                                <td><span class="amount">¥3,200</span></td>
+                                <td><span class="status status-carryover">最低支払額未満</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="amount">0000009</span></td>
+                                <td>中村 雅子</td>
+                                <td>テストプラン</td>
+                                <td><span class="amount">¥1,900</span></td>
+                                <td><span class="amount">¥2,500</span></td>
+                                <td><span class="amount">¥4,400</span></td>
+                                <td><span class="status status-carryover">最低支払額未満</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 支払履歴 -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">支払履歴</h2>
+                    <div style="display: flex; gap: var(--spacing-sm);">
+                        <select class="form-select" style="width: auto;">
+                            <option value="2025-08">2025年8月</option>
+                            <option value="2025-07">2025年7月</option>
+                            <option value="2025-06">2025年6月</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>支払日</th>
+                                <th>対象月</th>
+                                <th>支払者数</th>
+                                <th>支払総額</th>
+                                <th>繰越総額</th>
+                                <th>処理状況</th>
+                                <th>GMOファイル</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>2025-08-25</td>
+                                <td>2025年8月</td>
+                                <td>23名</td>
+                                <td><span class="amount">¥1,250,000</span></td>
+                                <td><span class="amount">¥85,400</span></td>
+                                <td><span class="status status-confirmed">処理済み</span></td>
+                                <td>
+                                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: var(--text-xs);" onclick="downloadGMOFile('2025-08')">ダウンロード</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>2025-07-25</td>
+                                <td>2025年7月</td>
+                                <td>21名</td>
+                                <td><span class="amount">¥1,089,500</span></td>
+                                <td><span class="amount">¥72,300</span></td>
+                                <td><span class="status status-confirmed">処理済み</span></td>
+                                <td>
+                                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: var(--text-xs);" onclick="downloadGMOFile('2025-07')">ダウンロード</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>2025-06-25</td>
+                                <td>2025年6月</td>
+                                <td>19名</td>
+                                <td><span class="amount">¥945,200</span></td>
+                                <td><span class="amount">¥63,800</span></td>
+                                <td><span class="status status-confirmed">処理済み</span></td>
+                                <td>
+                                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: var(--text-xs);" onclick="downloadGMOFile('2025-06')">ダウンロード</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 
+    【CF_06引き継ぎ情報】
+    UI要件: GMOネットバンク振込CSV生成、支払対象者確認、支払確定処理、繰越金額管理、支払履歴表示
+    必要API: 
+    - GET /api/payments/reward-summary: 支払対象者一覧取得（5000円以上）
+    - POST /api/payments/export/gmo: GMOネットバンク用CSV出力
+    - POST /api/payments/confirm: 支払確定処理
+    - GET /api/payments/carryover: 繰越金額一覧取得（5000円未満）
+    - GET /api/payments/history: 支払履歴取得
+    
+    入力データ: 
+    - reward-summary: { month?: string }
+    - export/gmo: { month: string, target_members: number[] }
+    - confirm: { payment_id: number, member_id: string }
+    - carryover: { month?: string }
+    - history: { page?: number, limit?: number, month_filter?: string }
+    
+    出力データ: 
+    - reward-summary: { member_id: string, member_number: string, name: string, plan: string, total_reward: number, carryover_amount: number, payment_amount: number, bank_name: string, status: string }[]
+    - export/gmo: FileResponse (CSV)
+    - confirm: { success: boolean, message: string }
+    - carryover: { member_id: string, member_number: string, name: string, current_reward: number, carryover_amount: number, total_amount: number, reason: string }[]
+    - history: { payment_date: string, target_month: string, member_count: number, total_amount: number, carryover_total: number, status: string, file_path: string }[]
+    
+    UI文脈: 
+    - 最低支払金額5,000円以上のメンバーのみ支払対象
+    - 5,000円未満は翌月繰越として管理
+    - GMOネットバンク用CSVファイルの手動ダウンロード
+    - 支払確定後はステータス更新
+    - 振込手数料は会社負担
+    
+    特記事項: 
+    - CSV出力時はShift-JISエンコーディング必須
+    - 支払確定処理は取り消し不可のため確認ダイアログ表示
+    - GMOネットバンクCSVフォーマット準拠
+    - 月次処理のため対象月指定機能
+    - 繰越金額の累積計算機能
+    -->
+
+    <script>
+        // 支払対象者確認
+        function showPaymentSummary() {
+            alert('支払対象者一覧を表示しました。\n5,000円以上の報酬を持つ23名が対象です。');
+        }
+
+        // GMO振込CSV出力
+        function exportGMOCSV() {
+            if (confirm('GMOネットバンク用振込CSVファイルを生成しますか？\n※生成後は手動でGMOネットバンクにアップロードしてください。')) {
+                alert('GMO振込CSVファイルが生成されました。\nダウンロードを開始します。');
+                // 実際の実装では、APIを呼び出してCSVファイルをダウンロード
+                console.log('GET /api/payments/export/gmo を呼び出し');
+            }
+        }
+
+        // 繰越金額確認
+        function showCarryoverList() {
+            const section = document.getElementById('carryoverSection');
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                section.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        // 支払確定処理
+        function confirmPayment(memberId) {
+            if (confirm(`会員ID: ${memberId}の支払を確定しますか？\n※確定後は取り消しできません。`)) {
+                alert(`会員ID: ${memberId}の支払が確定されました。`);
+                // 実際の実装では、APIを呼び出して支払確定処理
+                console.log(`POST /api/payments/confirm with member_id: ${memberId}`);
+                location.reload(); // 画面更新
+            }
+        }
+
+        // 支払詳細表示
+        function viewPaymentDetail(memberId) {
+            alert(`会員ID: ${memberId}の支払詳細を表示します。`);
+            // 実際の実装では、詳細画面へ遷移またはモーダル表示
+        }
+
+        // 支払対象者フィルタリング
+        function filterPaymentTargets(status) {
+            const table = document.getElementById('paymentTargetsTable');
+            const rows = table.querySelectorAll('tr');
+            
+            rows.forEach(row => {
+                if (status === 'all') {
+                    row.style.display = '';
+                } else {
+                    const statusCell = row.querySelector('.status');
+                    if (statusCell) {
+                        const rowStatus = statusCell.classList.contains('status-pending') ? 'pending' : 'confirmed';
+                        row.style.display = rowStatus === status ? '' : 'none';
+                    }
+                }
+            });
+        }
+
+        // GMOファイルダウンロード
+        function downloadGMOFile(month) {
+            alert(`${month}のGMO振込CSVファイルをダウンロードします。`);
+            // 実際の実装では、過去のCSVファイルをダウンロード
+            console.log(`Download GMO CSV for ${month}`);
+        }
+
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('P-006 報酬支払管理ページが読み込まれました');
+            
+            // 初期データ読み込み（実際の実装では以下のAPIを呼び出し）
+            console.log('必要なAPI呼び出し:');
+            console.log('- GET /api/payments/reward-summary');
+            console.log('- GET /api/payments/carryover');
+            console.log('- GET /api/payments/history');
+        });
+    </script>
+</body>
+</html>

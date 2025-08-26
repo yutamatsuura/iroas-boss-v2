@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P-004 決済管理 | IROAS BOSS v2</title>
+    <script src="https://unpkg.com/@mui/material@5/umd/material-ui.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <style>
+        /* デザインシステム - CSS変数 */
+        :root {
+            /* プライマリカラー */
+            --primary: #1e3a8a;
+            --primary-hover: #1e40af;
+            --primary-light: #3b82f6;
+            
+            /* セカンダリカラー */
+            --secondary: #3b82f6;
+            --secondary-hover: #2563eb;
+            --secondary-light: #60a5fa;
+            
+            /* ニュートラルカラー */
+            --background: #f1f5f9;
+            --surface: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --border-light: #e2e8f0;
+            
+            /* セマンティックカラー */
+            --success: #10b981;
+            --success-bg: #f0fdf4;
+            --warning: #f59e0b;
+            --warning-bg: #fffbeb;
+            --error: #ef4444;
+            --error-bg: #fef2f2;
+            --info: #3b82f6;
+            --info-bg: #eff6ff;
+            
+            /* スペーシング */
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            
+            /* フォント */
+            --font-primary: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+            --text-base: 1rem;
+            --text-sm: 0.875rem;
+            --text-lg: 1.125rem;
+            --text-xl: 1.25rem;
+            --text-2xl: 1.5rem;
+            --text-3xl: 1.875rem;
+            
+            /* トランジション */
+            --transition-base: all 0.2s ease;
+            --transition-fast: all 0.15s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-primary);
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        /* レイアウト */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* サイドバー */
+        .sidebar {
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            width: 280px;
+            padding: var(--spacing-lg);
+            overflow-y: auto;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .menu-section {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: var(--spacing-xl) 0 var(--spacing-sm) 0;
+        }
+        
+        .menu-item {
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .menu-item a {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition-base);
+        }
+        
+        .menu-item a:hover {
+            background: var(--border-light);
+            color: var(--text-primary);
+        }
+        
+        .menu-item a.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .menu-item .material-icons {
+            font-size: 20px;
+        }
+        
+        /* メインコンテンツ */
+        .main-content {
+            flex: 1;
+            padding: var(--spacing-xl);
+            overflow-y: auto;
+        }
+        
+        /* ヘッダー */
+        .page-header {
+            margin-bottom: var(--spacing-2xl);
+        }
+        
+        .page-title {
+            font-size: var(--text-3xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .page-subtitle {
+            font-size: var(--text-lg);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        /* タブ */
+        .tab-container {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: var(--spacing-xl);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tab-nav {
+            display: flex;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: var(--spacing-lg);
+            background: none;
+            border: none;
+            font-size: var(--text-base);
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition-base);
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab-button:hover {
+            background: var(--border-light);
+        }
+        
+        .tab-button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        
+        .tab-content {
+            padding: var(--spacing-xl);
+        }
+        
+        .tab-panel {
+            display: none;
+        }
+        
+        .tab-panel.active {
+            display: block;
+        }
+        
+        /* カード */
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: var(--spacing-lg);
+            transition: var(--transition-base);
+        }
+        
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card-header {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .card-title {
+            font-size: var(--text-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .card-content {
+            padding: var(--spacing-lg);
+        }
+        
+        /* ボタン */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: var(--text-base);
+            cursor: pointer;
+            transition: var(--transition-base);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            text-decoration: none;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+        
+        /* フォーム */
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--text-sm);
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: var(--text-base);
+            background: var(--surface);
+            transition: var(--transition-base);
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        }
+        
+        /* テーブル */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface);
+        }
+        
+        .table th,
+        .table td {
+            padding: var(--spacing-md);
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .table th {
+            background: var(--border-light);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .table tr:hover {
+            background: rgba(30, 58, 138, 0.05);
+        }
+        
+        /* ステータスバッジ */
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .status-success {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+        
+        .status-warning {
+            background: var(--warning-bg);
+            color: var(--warning);
+        }
+        
+        .status-error {
+            background: var(--error-bg);
+            color: var(--error);
+        }
+        
+        /* アラート */
+        .alert {
+            padding: var(--spacing-md);
+            border-radius: 8px;
+            margin-bottom: var(--spacing-md);
+            font-size: var(--text-sm);
+        }
+        
+        .alert-info {
+            background: var(--info-bg);
+            color: var(--info);
+            border: 1px solid var(--info);
+        }
+        
+        .alert-success {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+        
+        .alert-warning {
+            background: var(--warning-bg);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+        
+        /* グリッド */
+        .grid {
+            display: grid;
+            gap: var(--spacing-lg);
+        }
+        
+        .grid-cols-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .grid-cols-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        /* CSV出力セクション */
+        .csv-export-section {
+            display: flex;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .export-card {
+            flex: 1;
+            text-align: center;
+            padding: var(--spacing-xl);
+        }
+        
+        .export-icon {
+            font-size: 48px;
+            color: var(--primary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .export-description {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        /* ファイルアップロード */
+        .file-upload {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: var(--spacing-2xl);
+            text-align: center;
+            transition: var(--transition-base);
+        }
+        
+        .file-upload:hover {
+            border-color: var(--primary);
+            background: rgba(30, 58, 138, 0.05);
+        }
+        
+        .file-upload-icon {
+            font-size: 48px;
+            color: var(--text-muted);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .file-upload input[type="file"] {
+            display: none;
+        }
+        
+        /* 支払い種別アイコン */
+        .payment-method-icon {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .payment-method-icon .material-icons {
+            font-size: 18px;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .app-layout {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+            }
+            
+            .grid-cols-2,
+            .grid-cols-3 {
+                grid-template-columns: 1fr;
+            }
+            
+            .csv-export-section {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- サイドバー -->
+        <aside class="sidebar">
+            <div style="margin-bottom: 2rem;">
+                <h2 style="color: var(--primary); font-size: var(--text-2xl); font-weight: 700;">IROAS BOSS v2</h2>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li class="menu-section">メイン機能</li>
+                <li class="menu-item">
+                    <a href="/dashboard">
+                        <span class="material-icons">dashboard</span>
+                        ダッシュボード
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/members">
+                        <span class="material-icons">people</span>
+                        会員管理
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/organization">
+                        <span class="material-icons">account_tree</span>
+                        組織図
+                    </a>
+                </li>
+                
+                <li class="menu-section">決済・報酬</li>
+                <li class="menu-item">
+                    <a href="/payments" class="active">
+                        <span class="material-icons">payment</span>
+                        決済管理
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/rewards">
+                        <span class="material-icons">calculate</span>
+                        報酬計算
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/payouts">
+                        <span class="material-icons">account_balance</span>
+                        支払管理
+                    </a>
+                </li>
+                
+                <li class="menu-section">システム</li>
+                <li class="menu-item">
+                    <a href="/activity">
+                        <span class="material-icons">history</span>
+                        アクティビティログ
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/settings">
+                        <span class="material-icons">settings</span>
+                        マスタ設定
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/data">
+                        <span class="material-icons">storage</span>
+                        データ入出力
+                    </a>
+                </li>
+            </ul>
+        </aside>
+        
+        <!-- メインコンテンツ -->
+        <main class="main-content">
+            <!-- ヘッダー -->
+            <div class="page-header">
+                <h1 class="page-title">決済管理</h1>
+                <p class="page-subtitle">Univapay向けCSV出力、決済結果取込、手動決済記録を一元管理</p>
+            </div>
+            
+            <!-- タブコンテナ -->
+            <div class="tab-container">
+                <!-- タブナビゲーション -->
+                <div class="tab-nav">
+                    <button class="tab-button active" onclick="switchTab('csv-export')">CSV出力</button>
+                    <button class="tab-button" onclick="switchTab('result-import')">決済結果取込</button>
+                    <button class="tab-button" onclick="switchTab('manual-record')">手動記録</button>
+                    <button class="tab-button" onclick="switchTab('history')">決済履歴</button>
+                </div>
+                
+                <!-- CSV出力タブ -->
+                <div id="csv-export" class="tab-panel active">
+                    <div class="tab-content">
+                        <div class="alert alert-info">
+                            <strong>CSV出力期間について</strong><br>
+                            カード決済：月初1-5日 / 口座振替：月初-12日
+                        </div>
+                        
+                        <div class="csv-export-section">
+                            <!-- カード決済CSV -->
+                            <div class="card export-card">
+                                <div class="card-content">
+                                    <div class="material-icons export-icon">credit_card</div>
+                                    <h3 class="card-title">カード決済用CSV</h3>
+                                    <p class="export-description">
+                                        Univapayカード決済用CSVファイルを出力します<br>
+                                        対象期間：月初1-5日
+                                    </p>
+                                    <div class="form-group">
+                                        <label class="form-label">対象月</label>
+                                        <select class="form-select" id="card-month">
+                                            <option value="2025-01">2025年1月</option>
+                                            <option value="2025-02" selected>2025年2月</option>
+                                            <option value="2025-03">2025年3月</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn btn-primary" onclick="exportCardCSV()">
+                                        <span class="material-icons">download</span>
+                                        CSV出力（カード決済）
+                                    </button>
+                                    <div style="margin-top: var(--spacing-md); font-size: var(--text-sm); color: var(--text-secondary);">
+                                        対象者：<span id="card-target-count">12名</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 口座振替CSV -->
+                            <div class="card export-card">
+                                <div class="card-content">
+                                    <div class="material-icons export-icon">account_balance</div>
+                                    <h3 class="card-title">口座振替用CSV</h3>
+                                    <p class="export-description">
+                                        Univapay口座振替用CSVファイルを出力します<br>
+                                        対象期間：月初-12日
+                                    </p>
+                                    <div class="form-group">
+                                        <label class="form-label">対象月</label>
+                                        <select class="form-select" id="transfer-month">
+                                            <option value="2025-01">2025年1月</option>
+                                            <option value="2025-02" selected>2025年2月</option>
+                                            <option value="2025-03">2025年3月</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn btn-primary" onclick="exportTransferCSV()">
+                                        <span class="material-icons">download</span>
+                                        CSV出力（口座振替）
+                                    </button>
+                                    <div style="margin-top: var(--spacing-md); font-size: var(--text-sm); color: var(--text-secondary);">
+                                        対象者：<span id="transfer-target-count">38名</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 出力履歴 -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">出力履歴</h3>
+                            </div>
+                            <div class="card-content">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>日時</th>
+                                            <th>種別</th>
+                                            <th>対象月</th>
+                                            <th>対象者数</th>
+                                            <th>ファイル名</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>2025-02-01 09:15</td>
+                                            <td>
+                                                <div class="payment-method-icon">
+                                                    <span class="material-icons">credit_card</span>
+                                                    カード決済
+                                                </div>
+                                            </td>
+                                            <td>2025年1月</td>
+                                            <td>12名</td>
+                                            <td>card_payment_202501.csv</td>
+                                            <td>
+                                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.875rem;">
+                                                    <span class="material-icons" style="font-size: 16px;">download</span>
+                                                    再ダウンロード
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>2025-02-01 09:18</td>
+                                            <td>
+                                                <div class="payment-method-icon">
+                                                    <span class="material-icons">account_balance</span>
+                                                    口座振替
+                                                </div>
+                                            </td>
+                                            <td>2025年1月</td>
+                                            <td>38名</td>
+                                            <td>transfer_payment_202501.csv</td>
+                                            <td>
+                                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.875rem;">
+                                                    <span class="material-icons" style="font-size: 16px;">download</span>
+                                                    再ダウンロード
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 決済結果取込タブ -->
+                <div id="result-import" class="tab-panel">
+                    <div class="tab-content">
+                        <div class="alert alert-warning">
+                            <strong>注意事項</strong><br>
+                            UnivapayからダウンロードしたCSVファイルのみアップロードしてください。他のファイル形式は受け付けません。
+                        </div>
+                        
+                        <!-- ファイルアップロード -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">決済結果CSVの取込</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="file-upload" onclick="document.getElementById('result-file').click()">
+                                    <div class="material-icons file-upload-icon">cloud_upload</div>
+                                    <h4>CSVファイルをアップロード</h4>
+                                    <p style="color: var(--text-secondary); margin-top: var(--spacing-sm);">
+                                        Univapayの決済結果CSVファイルをドラッグ&ドロップするか、クリックしてファイルを選択
+                                    </p>
+                                    <input type="file" id="result-file" accept=".csv" onchange="handleFileUpload(this)">
+                                    <button class="btn btn-primary" style="margin-top: var(--spacing-lg);">
+                                        <span class="material-icons">folder_open</span>
+                                        ファイルを選択
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 取込履歴 -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">取込履歴</h3>
+                            </div>
+                            <div class="card-content">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>取込日時</th>
+                                            <th>ファイル名</th>
+                                            <th>処理件数</th>
+                                            <th>成功</th>
+                                            <th>エラー</th>
+                                            <th>ステータス</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>2025-02-05 14:30</td>
+                                            <td>univapay_result_202501.csv</td>
+                                            <td>50件</td>
+                                            <td>48件</td>
+                                            <td>2件</td>
+                                            <td>
+                                                <span class="status-badge status-success">完了</span>
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.875rem;">
+                                                    <span class="material-icons" style="font-size: 16px;">visibility</span>
+                                                    詳細
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>2025-01-08 10:15</td>
+                                            <td>univapay_result_202412.csv</td>
+                                            <td>45件</td>
+                                            <td>45件</td>
+                                            <td>0件</td>
+                                            <td>
+                                                <span class="status-badge status-success">完了</span>
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.875rem;">
+                                                    <span class="material-icons" style="font-size: 16px;">visibility</span>
+                                                    詳細
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 手動記録タブ -->
+                <div id="manual-record" class="tab-panel">
+                    <div class="tab-content">
+                        <div class="alert alert-info">
+                            <strong>手動記録対象</strong><br>
+                            銀行振込・インフォカートによる決済を手動で記録します。
+                        </div>
+                        
+                        <div class="grid grid-cols-2">
+                            <!-- 銀行振込記録 -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <span class="material-icons" style="vertical-align: middle; margin-right: var(--spacing-sm);">account_balance</span>
+                                        銀行振込記録
+                                    </h3>
+                                </div>
+                                <div class="card-content">
+                                    <form>
+                                        <div class="form-group">
+                                            <label class="form-label" for="bank-member">会員選択</label>
+                                            <select class="form-select" id="bank-member">
+                                                <option value="">会員を選択してください</option>
+                                                <option value="1">0000001 - 田中 太郎</option>
+                                                <option value="2">0000002 - 佐藤 花子</option>
+                                                <option value="3">0000003 - 鈴木 一郎</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label class="form-label" for="bank-amount">振込金額</label>
+                                            <input type="number" class="form-input" id="bank-amount" placeholder="10670" min="0">
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label class="form-label" for="bank-date">振込日</label>
+                                            <input type="date" class="form-input" id="bank-date">
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label class="form-label" for="bank-memo">メモ（任意）</label>
+                                            <input type="text" class="form-input" id="bank-memo" placeholder="振込確認済み">
+                                        </div>
+                                        
+                                        <button type="button" class="btn btn-primary" onclick="recordBankPayment()">
+                                            <span class="material-icons">save</span>
+                                            銀行振込を記録
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            
+                            <!-- インフォカート記録 -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <span class="material-icons" style="vertical-align: middle; margin-right: var(--spacing-sm);">shopping_cart</span>
+                                        インフォカート記録
+                                    </h3>
+                                </div>
+                                <div class="card-content">
+                                    <form>
+                                        <div class="form-group">
+                                            <label class="form-label" for="infocart-member">会員選択</label>
+                                            <select class="form-select" id="infocart-member">
+                                                <option value="">会員を選択してください</option>
+                                                <option value="1">0000001 - 田中 太郎</option>
+                                                <option value="2">0000002 - 佐藤 花子</option>
+                                                <option value="3">0000003 - 鈴木 一郎</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label class="form-label" for="infocart-amount">決済金額</label>
+                                            <input type="number" class="form-input" id="infocart-amount" placeholder="9800" min="0">
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label class="form-label" for="infocart-date">決済日</label>
+                                            <input type="date" class="form-input" id="infocart-date">
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label class="form-label" for="infocart-transaction-id">取引ID</label>
+                                            <input type="text" class="form-input" id="infocart-transaction-id" placeholder="IC-20250201-001">
+                                        </div>
+                                        
+                                        <button type="button" class="btn btn-success" onclick="recordInfocartPayment()">
+                                            <span class="material-icons">save</span>
+                                            インフォカートを記録
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 手動記録履歴 -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">手動記録履歴</h3>
+                            </div>
+                            <div class="card-content">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>記録日時</th>
+                                            <th>会員</th>
+                                            <th>種別</th>
+                                            <th>金額</th>
+                                            <th>決済日</th>
+                                            <th>メモ/取引ID</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>2025-02-01 11:30</td>
+                                            <td>0000015 - 山田 次郎</td>
+                                            <td>
+                                                <div class="payment-method-icon">
+                                                    <span class="material-icons">account_balance</span>
+                                                    銀行振込
+                                                </div>
+                                            </td>
+                                            <td>¥10,670</td>
+                                            <td>2025-01-31</td>
+                                            <td>振込確認済み</td>
+                                            <td>
+                                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.875rem;">
+                                                    <span class="material-icons" style="font-size: 16px;">edit</span>
+                                                    編集
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>2025-01-28 15:45</td>
+                                            <td>0000023 - 高橋 美香</td>
+                                            <td>
+                                                <div class="payment-method-icon">
+                                                    <span class="material-icons">shopping_cart</span>
+                                                    インフォカート
+                                                </div>
+                                            </td>
+                                            <td>¥9,800</td>
+                                            <td>2025-01-28</td>
+                                            <td>IC-20250128-001</td>
+                                            <td>
+                                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.875rem;">
+                                                    <span class="material-icons" style="font-size: 16px;">edit</span>
+                                                    編集
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 決済履歴タブ -->
+                <div id="history" class="tab-panel">
+                    <div class="tab-content">
+                        <!-- フィルター -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">検索・フィルター</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="grid grid-cols-3">
+                                    <div class="form-group">
+                                        <label class="form-label" for="history-member">会員</label>
+                                        <select class="form-select" id="history-member">
+                                            <option value="">全会員</option>
+                                            <option value="1">0000001 - 田中 太郎</option>
+                                            <option value="2">0000002 - 佐藤 花子</option>
+                                            <option value="3">0000003 - 鈴木 一郎</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label" for="history-method">決済方法</label>
+                                        <select class="form-select" id="history-method">
+                                            <option value="">全て</option>
+                                            <option value="card">カード決済</option>
+                                            <option value="transfer">口座振替</option>
+                                            <option value="bank">銀行振込</option>
+                                            <option value="infocart">インフォカート</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label" for="history-status">ステータス</label>
+                                        <select class="form-select" id="history-status">
+                                            <option value="">全て</option>
+                                            <option value="success">成功</option>
+                                            <option value="failed">失敗</option>
+                                            <option value="pending">保留</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-3">
+                                    <div class="form-group">
+                                        <label class="form-label" for="history-date-from">期間（開始）</label>
+                                        <input type="date" class="form-input" id="history-date-from" value="2025-01-01">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label" for="history-date-to">期間（終了）</label>
+                                        <input type="date" class="form-input" id="history-date-to" value="2025-02-28">
+                                    </div>
+                                    
+                                    <div class="form-group" style="display: flex; align-items: end;">
+                                        <button class="btn btn-primary" onclick="searchPaymentHistory()">
+                                            <span class="material-icons">search</span>
+                                            検索
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 履歴テーブル -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">決済履歴 (50件中 1-20件)</h3>
+                                <div style="margin-left: auto;">
+                                    <button class="btn btn-secondary" onclick="exportPaymentHistory()">
+                                        <span class="material-icons">download</span>
+                                        CSVエクスポート
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-content">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>決済日</th>
+                                            <th>会員</th>
+                                            <th>決済方法</th>
+                                            <th>金額</th>
+                                            <th>ステータス</th>
+                                            <th>取引ID</th>
+                                            <th>備考</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>2025-02-01</td>
+                                            <td>0000001 - 田中 太郎</td>
+                                            <td>
+                                                <div class="payment-method-icon">
+                                                    <span class="material-icons">credit_card</span>
+                                                    カード決済
+                                                </div>
+                                            </td>
+                                            <td>¥10,670</td>
+                                            <td>
+                                                <span class="status-badge status-success">成功</span>
+                                            </td>
+                                            <td>UV-20250201-001</td>
+                                            <td>-</td>
+                                            <td>
+                                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.875rem;">
+                                                    <span class="material-icons" style="font-size: 16px;">visibility</span>
+                                                    詳細
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>2025-02-01</td>
+                                            <td>0000002 - 佐藤 花子</td>
+                                            <td>
+                                                <div class="payment-method-icon">
+                                                    <span class="material-icons">account_balance</span>
+                                                    口座振替
+                                                </div>
+                                            </td>
+                                            <td>¥10,670</td>
+                                            <td>
+                                                <span class="status-badge status-success">成功</span>
+                                            </td>
+                                            <td>UV-20250201-002</td>
+                                            <td>-</td>
+                                            <td>
+                                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.875rem;">
+                                                    <span class="material-icons" style="font-size: 16px;">visibility</span>
+                                                    詳細
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>2025-01-31</td>
+                                            <td>0000015 - 山田 次郎</td>
+                                            <td>
+                                                <div class="payment-method-icon">
+                                                    <span class="material-icons">account_balance</span>
+                                                    銀行振込
+                                                </div>
+                                            </td>
+                                            <td>¥10,670</td>
+                                            <td>
+                                                <span class="status-badge status-success">成功</span>
+                                            </td>
+                                            <td>MANUAL-001</td>
+                                            <td>振込確認済み</td>
+                                            <td>
+                                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.875rem;">
+                                                    <span class="material-icons" style="font-size: 16px;">visibility</span>
+                                                    詳細
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>2025-01-28</td>
+                                            <td>0000023 - 高橋 美香</td>
+                                            <td>
+                                                <div class="payment-method-icon">
+                                                    <span class="material-icons">shopping_cart</span>
+                                                    インフォカート
+                                                </div>
+                                            </td>
+                                            <td>¥9,800</td>
+                                            <td>
+                                                <span class="status-badge status-success">成功</span>
+                                            </td>
+                                            <td>IC-20250128-001</td>
+                                            <td>-</td>
+                                            <td>
+                                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.875rem;">
+                                                    <span class="material-icons" style="font-size: 16px;">visibility</span>
+                                                    詳細
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>2025-01-15</td>
+                                            <td>0000005 - 中村 健</td>
+                                            <td>
+                                                <div class="payment-method-icon">
+                                                    <span class="material-icons">credit_card</span>
+                                                    カード決済
+                                                </div>
+                                            </td>
+                                            <td>¥10,670</td>
+                                            <td>
+                                                <span class="status-badge status-error">失敗</span>
+                                            </td>
+                                            <td>UV-20250115-005</td>
+                                            <td>残高不足</td>
+                                            <td>
+                                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.875rem;">
+                                                    <span class="material-icons" style="font-size: 16px;">visibility</span>
+                                                    詳細
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                
+                                <!-- ページネーション -->
+                                <div style="display: flex; justify-content: center; align-items: center; margin-top: var(--spacing-xl); gap: var(--spacing-md);">
+                                    <button class="btn btn-secondary" style="padding: 8px 12px;">
+                                        <span class="material-icons">chevron_left</span>
+                                        前のページ
+                                    </button>
+                                    <span style="color: var(--text-secondary);">1 / 3</span>
+                                    <button class="btn btn-secondary" style="padding: 8px 12px;">
+                                        次のページ
+                                        <span class="material-icons">chevron_right</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!--
+    【CF_06引き継ぎ情報】
+    UI要件: カード決済・口座振替CSV出力、決済結果取込、手動決済記録、決済履歴表示
+    必要API: 
+    - GET /api/payments/targets/card - カード決済対象者一覧取得
+    - GET /api/payments/targets/transfer - 口座振替対象者一覧取得  
+    - POST /api/payments/export/card - カード決済用CSV出力
+    - POST /api/payments/export/transfer - 口座振替用CSV出力
+    - POST /api/payments/import/result - 決済結果CSV取込
+    - POST /api/payments/manual - 手動決済記録（銀行振込/インフォカート）
+    - GET /api/payments/history - 決済履歴一覧取得
+    
+    入力データ:
+    - exportCardCSV(): { month: string (YYYY-MM) }
+    - exportTransferCSV(): { month: string (YYYY-MM) }
+    - importResult(): { file: File }
+    - recordManualPayment(): { member_id: string, amount: number, payment_date: string, payment_type: 'bank'|'infocart', memo?: string, transaction_id?: string }
+    - searchPaymentHistory(): { member_id?: string, payment_method?: string, status?: string, date_from: string, date_to: string }
+    
+    出力データ:
+    - PaymentTargetModel: { member_id: string, member_number: string, member_name: string, plan: string, amount: number }
+    - FileResponse: CSV file download
+    - ImportResultModel: { success_count: number, error_count: number, errors: Array<{row: number, message: string}> }
+    - PaymentHistoryModel: { id: number, payment_date: string, member: MemberModel, payment_method: string, amount: number, status: string, transaction_id: string, memo?: string }
+    
+    UI文脈: 
+    - タブ形式でCSV出力・結果取込・手動記録・履歴を切り替え
+    - CSV出力は月選択後にファイルダウンロード
+    - 決済結果取込はファイルアップロード
+    - 手動記録は銀行振込・インフォカート別フォーム
+    - 決済履歴は検索フィルター・ページネーション対応
+    
+    特記事項: 
+    - CSV出力期間制限（カード決済：月初1-5日、口座振替：月初-12日）
+    - ファイルアップロードはDrag&Drop対応
+    - 手動決済記録は会員選択必須
+    - 履歴検索は日付範囲指定必須
+    -->
+
+    <script>
+        // タブ切り替え
+        function switchTab(tabId) {
+            // 全てのタブボタンとパネルを非アクティブに
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+            
+            // 指定されたタブをアクティブに
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+        
+        // CSV出力関数
+        function exportCardCSV() {
+            const month = document.getElementById('card-month').value;
+            alert(`カード決済用CSV出力: ${month}`);
+            // 実際の実装では /api/payments/export/card を呼び出し
+        }
+        
+        function exportTransferCSV() {
+            const month = document.getElementById('transfer-month').value;
+            alert(`口座振替用CSV出力: ${month}`);
+            // 実際の実装では /api/payments/export/transfer を呼び出し
+        }
+        
+        // ファイルアップロード処理
+        function handleFileUpload(input) {
+            const file = input.files[0];
+            if (file && file.name.endsWith('.csv')) {
+                alert(`ファイルアップロード: ${file.name}`);
+                // 実際の実装では /api/payments/import/result を呼び出し
+            } else {
+                alert('CSVファイルを選択してください');
+            }
+        }
+        
+        // 手動記録関数
+        function recordBankPayment() {
+            const memberSelect = document.getElementById('bank-member');
+            const amount = document.getElementById('bank-amount').value;
+            const date = document.getElementById('bank-date').value;
+            const memo = document.getElementById('bank-memo').value;
+            
+            if (!memberSelect.value || !amount || !date) {
+                alert('必須項目を入力してください');
+                return;
+            }
+            
+            alert(`銀行振込記録: 会員=${memberSelect.options[memberSelect.selectedIndex].text}, 金額=${amount}, 日付=${date}`);
+            // 実際の実装では /api/payments/manual を呼び出し
+            
+            // フォームリセット
+            document.getElementById('bank-member').value = '';
+            document.getElementById('bank-amount').value = '';
+            document.getElementById('bank-date').value = '';
+            document.getElementById('bank-memo').value = '';
+        }
+        
+        function recordInfocartPayment() {
+            const memberSelect = document.getElementById('infocart-member');
+            const amount = document.getElementById('infocart-amount').value;
+            const date = document.getElementById('infocart-date').value;
+            const transactionId = document.getElementById('infocart-transaction-id').value;
+            
+            if (!memberSelect.value || !amount || !date || !transactionId) {
+                alert('必須項目を入力してください');
+                return;
+            }
+            
+            alert(`インフォカート記録: 会員=${memberSelect.options[memberSelect.selectedIndex].text}, 金額=${amount}, 取引ID=${transactionId}`);
+            // 実際の実装では /api/payments/manual を呼び出し
+            
+            // フォームリセット
+            document.getElementById('infocart-member').value = '';
+            document.getElementById('infocart-amount').value = '';
+            document.getElementById('infocart-date').value = '';
+            document.getElementById('infocart-transaction-id').value = '';
+        }
+        
+        // 履歴検索
+        function searchPaymentHistory() {
+            const filters = {
+                member: document.getElementById('history-member').value,
+                method: document.getElementById('history-method').value,
+                status: document.getElementById('history-status').value,
+                dateFrom: document.getElementById('history-date-from').value,
+                dateTo: document.getElementById('history-date-to').value
+            };
+            
+            console.log('検索条件:', filters);
+            alert('決済履歴を検索しています...');
+            // 実際の実装では /api/payments/history を呼び出し
+        }
+        
+        // 履歴エクスポート
+        function exportPaymentHistory() {
+            alert('決済履歴CSVをエクスポートしています...');
+            // 実際の実装では検索条件を含めてCSVエクスポートAPIを呼び出し
+        }
+        
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 今日の日付を手動記録の日付フィールドに設定
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('bank-date').value = today;
+            document.getElementById('infocart-date').value = today;
+        });
+    </script>
+</body>
+</html>

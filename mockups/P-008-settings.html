@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P-008: マスタ設定 | IROAS BOSS v2</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        /* CSS変数定義（デザインシステム準拠） */
+        :root {
+            /* プライマリカラー */
+            --primary: #1e3a8a;
+            --primary-hover: #1e40af;
+            --primary-light: #3b82f6;
+            
+            /* セカンダリカラー */
+            --secondary: #3b82f6;
+            --secondary-hover: #2563eb;
+            --secondary-light: #60a5fa;
+            
+            /* ニュートラルカラー */
+            --background: #f1f5f9;
+            --surface: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --border-light: #e2e8f0;
+            
+            /* セマンティックカラー */
+            --success: #10b981;
+            --success-bg: #f0fdf4;
+            --warning: #f59e0b;
+            --warning-bg: #fffbeb;
+            --error: #ef4444;
+            --error-bg: #fef2f2;
+            --info: #3b82f6;
+            --info-bg: #eff6ff;
+            
+            /* フォント */
+            --font-primary: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+            
+            /* フォントサイズ */
+            --text-3xl: 1.875rem;
+            --text-2xl: 1.5rem;
+            --text-xl: 1.25rem;
+            --text-lg: 1.125rem;
+            --text-base: 1rem;
+            --text-sm: 0.875rem;
+            --text-xs: 0.75rem;
+            
+            /* スペーシング */
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            --spacing-3xl: 4rem;
+            
+            /* トランジション */
+            --transition-base: all 0.2s ease;
+        }
+
+        /* ベーススタイル */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* レイアウト */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: var(--spacing-lg);
+            overflow-y: auto;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: var(--spacing-lg) var(--spacing-xl);
+        }
+
+        .content {
+            flex: 1;
+            padding: var(--spacing-xl);
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* ナビゲーション */
+        .logo {
+            font-size: var(--text-xl);
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: var(--spacing-xl);
+            padding-bottom: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .menu-section {
+            font-size: var(--text-xs);
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: var(--spacing-xl) 0 var(--spacing-sm) 0;
+        }
+
+        .menu-item {
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .menu-item a {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition-base);
+        }
+
+        .menu-item a:hover {
+            background: var(--border-light);
+            color: var(--text-primary);
+        }
+
+        .menu-item a.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* ヘッダー */
+        .page-title {
+            font-size: var(--text-2xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .page-subtitle {
+            font-size: var(--text-base);
+            color: var(--text-secondary);
+        }
+
+        /* カード */
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            transition: var(--transition-base);
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .card-title {
+            font-size: var(--text-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .card-content {
+            line-height: 1.8;
+        }
+
+        /* テーブル */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .info-table th {
+            background: var(--background);
+            padding: var(--spacing-md);
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            font-size: var(--text-sm);
+            width: 30%;
+        }
+
+        .info-table td {
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: var(--text-base);
+        }
+
+        /* グリッド */
+        .grid {
+            display: grid;
+            gap: var(--spacing-lg);
+        }
+
+        .grid-cols-1 { grid-template-columns: 1fr; }
+        .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+
+        /* アラート */
+        .alert {
+            padding: var(--spacing-md);
+            border-radius: 8px;
+            margin-bottom: var(--spacing-lg);
+            font-size: var(--text-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .alert-info {
+            background: var(--info-bg);
+            color: var(--info);
+            border: 1px solid var(--info);
+        }
+
+        /* 価格表示 */
+        .price {
+            font-size: var(--text-lg);
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* ステータス表示 */
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: 6px;
+            font-size: var(--text-xs);
+            font-weight: 500;
+        }
+
+        .status.readonly {
+            background: var(--warning-bg);
+            color: var(--warning);
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .app-layout {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+            }
+
+            .content {
+                padding: var(--spacing-lg);
+            }
+
+            .grid-cols-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* アニメーション */
+        .fade-in {
+            animation: fadeInUp 0.3s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!--
+    【CF_06引き継ぎ情報】
+    UI要件: システム固定値の確認表示（読み取り専用）
+    必要API: GET /api/settings/system, GET /api/settings/business-rules
+    入力データ: なし（表示のみ）
+    出力データ: { 
+        system_settings: { plans: { hero: 10670, test: 9800 } },
+        business_rules: { titles: Array, bonus_rates: Array }
+    }
+    UI文脈: 設定確認のみ、編集機能なし
+    特記事項: 固定値のため変更不可、参照専用画面
+    -->
+
+    <div class="app-layout">
+        <!-- サイドバー -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="bi bi-gear-fill"></i>
+                IROAS BOSS v2
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="menu-section">メイン機能</li>
+                <li class="menu-item">
+                    <a href="#">
+                        <i class="bi bi-speedometer2"></i>
+                        ダッシュボード
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="#">
+                        <i class="bi bi-people"></i>
+                        会員管理
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="#">
+                        <i class="bi bi-diagram-3"></i>
+                        組織図ビューア
+                    </a>
+                </li>
+                
+                <li class="menu-section">決済・報酬</li>
+                <li class="menu-item">
+                    <a href="#">
+                        <i class="bi bi-credit-card"></i>
+                        決済管理
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="#">
+                        <i class="bi bi-calculator"></i>
+                        報酬計算
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="#">
+                        <i class="bi bi-bank"></i>
+                        報酬支払管理
+                    </a>
+                </li>
+                
+                <li class="menu-section">システム</li>
+                <li class="menu-item">
+                    <a href="#">
+                        <i class="bi bi-activity"></i>
+                        アクティビティログ
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="#" class="active">
+                        <i class="bi bi-gear"></i>
+                        マスタ設定
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="#">
+                        <i class="bi bi-database"></i>
+                        データ入出力
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- メインコンテンツ -->
+        <main class="main-content">
+            <!-- ヘッダー -->
+            <header class="header">
+                <h1 class="page-title">マスタ設定</h1>
+                <p class="page-subtitle">システム固定値の確認・参照</p>
+            </header>
+
+            <!-- コンテンツエリア -->
+            <div class="content fade-in">
+                <!-- 情報アラート -->
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    これらの設定値はシステム固定値のため変更できません。参照専用となります。
+                </div>
+
+                <!-- グリッドレイアウト -->
+                <div class="grid grid-cols-2">
+                    <!-- プラン料金設定 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <i class="bi bi-currency-yen"></i>
+                                プラン料金設定
+                            </h2>
+                        </div>
+                        <div class="card-content">
+                            <table class="info-table">
+                                <tbody>
+                                    <tr>
+                                        <th>ヒーロープラン</th>
+                                        <td>
+                                            <span class="price">¥10,670</span>
+                                            <span class="status readonly">
+                                                <i class="bi bi-lock"></i>
+                                                固定値
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>テストプラン</th>
+                                        <td>
+                                            <span class="price">¥9,800</span>
+                                            <span class="status readonly">
+                                                <i class="bi bi-lock"></i>
+                                                固定値
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- タイトル条件設定 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <i class="bi bi-award"></i>
+                                タイトル条件設定
+                            </h2>
+                        </div>
+                        <div class="card-content">
+                            <table class="info-table">
+                                <tbody>
+                                    <tr>
+                                        <th>称号なし</th>
+                                        <td>基本レベル</td>
+                                    </tr>
+                                    <tr>
+                                        <th>ナイト/デイム</th>
+                                        <td>条件達成時自動昇格</td>
+                                    </tr>
+                                    <tr>
+                                        <th>ロード/レディ</th>
+                                        <td>上級レベル達成</td>
+                                    </tr>
+                                    <tr>
+                                        <th>キング/クイーン</th>
+                                        <td>リーダーレベル</td>
+                                    </tr>
+                                    <tr>
+                                        <th>エンペラー/エンブレス</th>
+                                        <td>最高位レベル</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 報酬レート設定 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="bi bi-percent"></i>
+                            報酬レート設定
+                        </h2>
+                    </div>
+                    <div class="card-content">
+                        <div class="grid grid-cols-2">
+                            <table class="info-table">
+                                <thead>
+                                    <tr>
+                                        <th>ボーナス種類</th>
+                                        <th>レート/条件</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>デイリーボーナス</td>
+                                        <td>システム計算</td>
+                                    </tr>
+                                    <tr>
+                                        <td>タイトルボーナス</td>
+                                        <td>タイトル別設定</td>
+                                    </tr>
+                                    <tr>
+                                        <td>リファラルボーナス</td>
+                                        <td>50%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>パワーボーナス</td>
+                                        <td>組織売上ベース</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <table class="info-table">
+                                <thead>
+                                    <tr>
+                                        <th>ボーナス種類</th>
+                                        <th>レート/条件</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>メンテナンスボーナス</td>
+                                        <td>維持条件ベース</td>
+                                    </tr>
+                                    <tr>
+                                        <td>セールスアクティビティボーナス</td>
+                                        <td>活動実績ベース</td>
+                                    </tr>
+                                    <tr>
+                                        <td>ロイヤルファミリーボーナス</td>
+                                        <td>特別条件</td>
+                                    </tr>
+                                    <tr>
+                                        <td>支払最低額</td>
+                                        <td>¥5,000</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- システム運用設定 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="bi bi-gear-wide-connected"></i>
+                            システム運用設定
+                        </h2>
+                    </div>
+                    <div class="card-content">
+                        <table class="info-table">
+                            <tbody>
+                                <tr>
+                                    <th>カード決済処理期間</th>
+                                    <td>月初1-5日</td>
+                                </tr>
+                                <tr>
+                                    <th>口座振替処理期間</th>
+                                    <td>月初-12日</td>
+                                </tr>
+                                <tr>
+                                    <th>報酬支払処理</th>
+                                    <td>月末締め翌月支払</td>
+                                </tr>
+                                <tr>
+                                    <th>バックアップ実行</th>
+                                    <td>日次自動実行</td>
+                                </tr>
+                                <tr>
+                                    <th>最大会員数</th>
+                                    <td>50名（新規募集なし）</td>
+                                </tr>
+                                <tr>
+                                    <th>CSVエンコーディング</th>
+                                    <td>Shift-JIS</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ページ読み込み時のアニメーション
+        document.addEventListener('DOMContentLoaded', function() {
+            // カードのフェードイン効果
+            const cards = document.querySelectorAll('.card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(20px)';
+                    card.style.transition = 'all 0.3s ease';
+                    
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, 100);
+                }, index * 100);
+            });
+
+            // サイドバーのアクティブ状態管理
+            const menuItems = document.querySelectorAll('.menu-item a');
+            menuItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // 全てのアクティブクラスを削除
+                    menuItems.forEach(menu => menu.classList.remove('active'));
+                    
+                    // クリックしたアイテムにアクティブクラスを追加
+                    this.classList.add('active');
+                });
+            });
+
+            // レスポンシブ対応
+            function handleResize() {
+                const sidebar = document.querySelector('.sidebar');
+                const mainContent = document.querySelector('.main-content');
+                
+                if (window.innerWidth <= 768) {
+                    sidebar.style.display = 'none';
+                    mainContent.style.width = '100%';
+                } else {
+                    sidebar.style.display = 'block';
+                    mainContent.style.width = 'calc(100% - 280px)';
+                }
+            }
+
+            window.addEventListener('resize', handleResize);
+            handleResize(); // 初期実行
+        });
+    </script>
+</body>
+</html>

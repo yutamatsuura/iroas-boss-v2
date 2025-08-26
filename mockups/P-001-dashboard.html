@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ダッシュボード - IROAS BOSS v2</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* エンタープライズテーマ - デザインシステムCSS変数 */
+        :root {
+            /* プライマリカラー */
+            --primary: #1e3a8a;
+            --primary-hover: #1e40af;
+            --primary-light: #3b82f6;
+
+            /* セカンダリカラー */
+            --secondary: #3b82f6;
+            --secondary-hover: #2563eb;
+            --secondary-light: #60a5fa;
+
+            /* ニュートラルカラー */
+            --background: #f1f5f9;
+            --surface: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --border-light: #e2e8f0;
+
+            /* セマンティックカラー */
+            --success: #10b981;
+            --success-bg: #f0fdf4;
+            --warning: #f59e0b;
+            --warning-bg: #fffbeb;
+            --error: #ef4444;
+            --error-bg: #fef2f2;
+            --info: #3b82f6;
+            --info-bg: #eff6ff;
+
+            /* フォント */
+            --font-primary: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+            --text-3xl: 1.875rem;
+            --text-2xl: 1.5rem;
+            --text-xl: 1.25rem;
+            --text-lg: 1.125rem;
+            --text-base: 1rem;
+            --text-sm: 0.875rem;
+            --text-xs: 0.75rem;
+
+            /* スペーシング */
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            --spacing-3xl: 4rem;
+
+            /* トランジション */
+            --transition-fast: all 0.15s ease;
+            --transition-base: all 0.2s ease;
+            --transition-slow: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        /* レイアウト構造 */
+        .app-layout {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* サイドバー */
+        .sidebar {
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            width: 280px;
+            height: 100vh;
+            padding: var(--spacing-lg);
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand {
+            margin-bottom: var(--spacing-2xl);
+            padding-bottom: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .brand-logo h1 {
+            color: var(--primary);
+            font-size: var(--text-xl);
+            font-weight: 700;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .brand-tagline {
+            color: var(--text-muted);
+            font-size: var(--text-sm);
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .menu-section {
+            font-size: var(--text-xs);
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: var(--spacing-xl) 0 var(--spacing-sm) 0;
+        }
+
+        .menu-item {
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .menu-item a {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: var(--text-sm);
+            transition: var(--transition-base);
+        }
+
+        .menu-item a:hover {
+            background: var(--border-light);
+            color: var(--text-primary);
+        }
+
+        .menu-item a.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .menu-icon {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* メインコンテンツ */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ヘッダー */
+        .main-header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: var(--spacing-lg) var(--spacing-xl);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .page-title {
+            font-size: var(--text-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            align-items: center;
+        }
+
+        /* ボタンスタイル */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: var(--text-base);
+            cursor: pointer;
+            transition: var(--transition-base);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* スクロールエリア */
+        .scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-xl);
+        }
+
+        /* カードスタイル */
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: var(--spacing-lg);
+            transition: var(--transition-base);
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            margin-bottom: var(--spacing-md);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .card-title {
+            font-size: var(--text-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .card-description {
+            color: var(--text-secondary);
+            font-size: var(--text-sm);
+            margin-top: var(--spacing-xs);
+        }
+
+        /* グリッドレイアウト */
+        .grid {
+            display: grid;
+            gap: var(--spacing-lg);
+        }
+
+        .grid-cols-1 { grid-template-columns: 1fr; }
+        .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+        .grid-responsive {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        /* ウェルカムセクション */
+        .welcome-section {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            border-radius: 16px;
+            padding: var(--spacing-2xl);
+            margin-bottom: var(--spacing-2xl);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .welcome-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(20px, -20px);
+        }
+
+        .welcome-title {
+            font-size: var(--text-3xl);
+            font-weight: 700;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .welcome-subtitle {
+            font-size: var(--text-lg);
+            opacity: 0.9;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        /* 機能カード */
+        .feature-card {
+            text-align: center;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .feature-title {
+            font-size: var(--text-lg);
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .feature-action {
+            margin-top: var(--spacing-lg);
+        }
+
+        /* システムステータス */
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-sm) 0;
+        }
+
+        .status-label {
+            color: var(--text-secondary);
+            font-size: var(--text-sm);
+        }
+
+        .status-badge {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: 20px;
+            font-size: var(--text-xs);
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+
+        .status-warning {
+            background: var(--warning-bg);
+            color: var(--warning);
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .app-layout {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                order: 2;
+            }
+            
+            .main-content {
+                order: 1;
+            }
+            
+            .grid-responsive {
+                grid-template-columns: 1fr;
+            }
+            
+            .main-header {
+                padding: var(--spacing-md);
+            }
+            
+            .scroll-area {
+                padding: var(--spacing-md);
+            }
+        }
+
+        /* アニメーション */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .page-transition {
+            animation: fadeInUp 0.3s ease;
+        }
+
+        /* フォーカス表示 */
+        .focus-ring:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!--
+    【CF_06引き継ぎ情報】
+    UI要件: ダッシュボードページ - システムナビゲーションのメイン機能
+    必要API: 静的ページのためAPIエンドポイントなし
+    入力データ: なし
+    出力データ: なし
+    UI文脈: 各機能ページへのナビゲーション導線を提供
+    特記事項: メニューリンクのみでAPI連携は不要
+    -->
+
+    <div class="app-layout">
+        <!-- サイドバー -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-logo">
+                    <h1>IROAS BOSS v2</h1>
+                    <div class="brand-tagline">MLM組織管理システム</div>
+                </div>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li class="menu-section">メイン機能</li>
+                <li class="menu-item">
+                    <a href="/" class="active focus-ring">
+                        <i class="fas fa-tachometer-alt menu-icon"></i>
+                        ダッシュボード
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/members" class="focus-ring">
+                        <i class="fas fa-users menu-icon"></i>
+                        会員管理
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/organization" class="focus-ring">
+                        <i class="fas fa-sitemap menu-icon"></i>
+                        組織図ビューア
+                    </a>
+                </li>
+                
+                <li class="menu-section">決済・報酬</li>
+                <li class="menu-item">
+                    <a href="/payments" class="focus-ring">
+                        <i class="fas fa-credit-card menu-icon"></i>
+                        決済管理
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/rewards" class="focus-ring">
+                        <i class="fas fa-calculator menu-icon"></i>
+                        報酬計算
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/payouts" class="focus-ring">
+                        <i class="fas fa-university menu-icon"></i>
+                        報酬支払管理
+                    </a>
+                </li>
+                
+                <li class="menu-section">システム</li>
+                <li class="menu-item">
+                    <a href="/activity" class="focus-ring">
+                        <i class="fas fa-history menu-icon"></i>
+                        アクティビティログ
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/settings" class="focus-ring">
+                        <i class="fas fa-cog menu-icon"></i>
+                        マスタ設定
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/data" class="focus-ring">
+                        <i class="fas fa-database menu-icon"></i>
+                        データ入出力
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- メインコンテンツ -->
+        <main class="main-content">
+            <!-- ヘッダー -->
+            <header class="main-header">
+                <h1 class="page-title">ダッシュボード</h1>
+                <div class="header-actions">
+                    <button class="btn btn-secondary focus-ring">
+                        <i class="fas fa-bell"></i>
+                        通知
+                    </button>
+                    <button class="btn btn-primary focus-ring">
+                        <i class="fas fa-user"></i>
+                        アカウント
+                    </button>
+                </div>
+            </header>
+
+            <!-- スクロールエリア -->
+            <div class="scroll-area page-transition">
+                <!-- ウェルカムセクション -->
+                <section class="welcome-section">
+                    <h2 class="welcome-title">IROAS BOSS v2へようこそ</h2>
+                    <p class="welcome-subtitle">
+                        50名のMLM組織管理、決済処理、報酬計算を統合管理できます
+                    </p>
+                    <div class="header-actions">
+                        <a href="/members" class="btn btn-secondary" style="background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); color: white;">
+                            <i class="fas fa-plus"></i>
+                            新規会員登録
+                        </a>
+                        <a href="/rewards" class="btn btn-secondary" style="background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); color: white;">
+                            <i class="fas fa-calculator"></i>
+                            今月の報酬計算
+                        </a>
+                    </div>
+                </section>
+
+                <!-- メイン機能セクション -->
+                <section style="margin-bottom: var(--spacing-2xl);">
+                    <h3 style="font-size: var(--text-xl); font-weight: 600; margin-bottom: var(--spacing-lg); color: var(--text-primary);">
+                        主要機能
+                    </h3>
+                    <div class="grid grid-responsive">
+                        <div class="card feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <h4 class="feature-title">会員管理</h4>
+                            <p class="card-description">
+                                50名の会員データを完全管理。検索、編集、退会処理、組織調整を統合実施
+                            </p>
+                            <div class="feature-action">
+                                <a href="/members" class="btn btn-primary">
+                                    会員一覧へ
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="card feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-sitemap"></i>
+                            </div>
+                            <h4 class="feature-title">組織図ビューア</h4>
+                            <p class="card-description">
+                                MLM組織をツリー形式で視覚的に表示。階層構造と会員関係を直感的に把握
+                            </p>
+                            <div class="feature-action">
+                                <a href="/organization" class="btn btn-primary">
+                                    組織図を見る
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="card feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-credit-card"></i>
+                            </div>
+                            <h4 class="feature-title">決済管理</h4>
+                            <p class="card-description">
+                                Univapay向けCSV出力、決済結果取込、銀行振込・インフォカート記録を一元管理
+                            </p>
+                            <div class="feature-action">
+                                <a href="/payments" class="btn btn-primary">
+                                    決済を管理
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 決済・報酬セクション -->
+                <section style="margin-bottom: var(--spacing-2xl);">
+                    <h3 style="font-size: var(--text-xl); font-weight: 600; margin-bottom: var(--spacing-lg); color: var(--text-primary);">
+                        決済・報酬管理
+                    </h3>
+                    <div class="grid grid-responsive">
+                        <div class="card feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-calculator"></i>
+                            </div>
+                            <h4 class="feature-title">報酬計算</h4>
+                            <p class="card-description">
+                                7種類のボーナス（デイリー、タイトル、リファラル等）を正確に計算し、個人別内訳を確認
+                            </p>
+                            <div class="feature-action">
+                                <a href="/rewards" class="btn btn-primary">
+                                    報酬を計算
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="card feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-university"></i>
+                            </div>
+                            <h4 class="feature-title">報酬支払管理</h4>
+                            <p class="card-description">
+                                GMOネットバンク振込CSV生成。5,000円以上の支払対象者確認と繰越金額管理
+                            </p>
+                            <div class="feature-action">
+                                <a href="/payouts" class="btn btn-primary">
+                                    支払を管理
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- システム管理セクション -->
+                <section>
+                    <h3 style="font-size: var(--text-xl); font-weight: 600; margin-bottom: var(--spacing-lg); color: var(--text-primary);">
+                        システム管理
+                    </h3>
+                    <div class="grid grid-cols-2">
+                        <div class="card">
+                            <div class="card-header">
+                                <h4 class="card-title">
+                                    <i class="fas fa-history" style="color: var(--primary); margin-right: var(--spacing-sm);"></i>
+                                    アクティビティログ
+                                </h4>
+                                <p class="card-description">
+                                    システムで実行された全操作の履歴を時系列で確認
+                                </p>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">今日のアクティビティ</span>
+                                <span class="status-badge status-active">15件</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">最新操作</span>
+                                <span class="status-label">2時間前</span>
+                            </div>
+                            <div class="feature-action" style="margin-top: var(--spacing-md);">
+                                <a href="/activity" class="btn btn-secondary">
+                                    ログを確認
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h4 class="card-title">
+                                    <i class="fas fa-database" style="color: var(--primary); margin-right: var(--spacing-sm);"></i>
+                                    データ管理
+                                </h4>
+                                <p class="card-description">
+                                    会員データのインポート、システムバックアップ・リストア管理
+                                </p>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">最終バックアップ</span>
+                                <span class="status-badge status-active">12時間前</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">データ容量</span>
+                                <span class="status-label">2.3 MB</span>
+                            </div>
+                            <div class="feature-action" style="margin-top: var(--spacing-md);">
+                                <a href="/data" class="btn btn-secondary">
+                                    データ管理
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript（基本的なインタラクション） -->
+    <script>
+        // サイドバーのアクティブ状態管理
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuItems = document.querySelectorAll('.menu-item a');
+            const currentPath = window.location.pathname;
+
+            menuItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    // デモ用：実際のページ遷移を防ぐ
+                    e.preventDefault();
+                    
+                    // 現在のアクティブ状態を削除
+                    menuItems.forEach(link => link.classList.remove('active'));
+                    
+                    // クリックされたアイテムをアクティブに
+                    this.classList.add('active');
+                    
+                    // デモ用フィードバック
+                    const pageName = this.textContent.trim();
+                    showNotification(`${pageName}ページへの遷移をシミュレーション中...`);
+                });
+            });
+
+            // 機能カードのホバーエフェクト
+            const featureCards = document.querySelectorAll('.feature-card');
+            featureCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-4px)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+        });
+
+        // 通知表示機能
+        function showNotification(message) {
+            // 既存の通知があれば削除
+            const existingNotification = document.querySelector('.notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: var(--info);
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                z-index: 1000;
+                animation: slideInRight 0.3s ease;
+            `;
+            notification.textContent = message;
+
+            document.body.appendChild(notification);
+
+            // 3秒後に削除
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // アニメーション用CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOutRight {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

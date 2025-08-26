@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P-003: 組織図ビューア | IROAS BOSS v2</title>
+    <style>
+        /* CSS Variables from Design System */
+        :root {
+            /* Primary Colors */
+            --primary: #1e3a8a;
+            --primary-hover: #1e40af;
+            --primary-light: #3b82f6;
+            
+            /* Secondary Colors */
+            --secondary: #3b82f6;
+            --secondary-hover: #2563eb;
+            --secondary-light: #60a5fa;
+            
+            /* Neutral Colors */
+            --background: #f1f5f9;
+            --surface: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --border-light: #e2e8f0;
+            
+            /* Semantic Colors */
+            --success: #10b981;
+            --success-bg: #f0fdf4;
+            --warning: #f59e0b;
+            --warning-bg: #fffbeb;
+            --error: #ef4444;
+            --error-bg: #fef2f2;
+            --info: #3b82f6;
+            --info-bg: #eff6ff;
+            
+            /* Typography */
+            --font-primary: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+            --text-3xl: 1.875rem;
+            --text-2xl: 1.5rem;
+            --text-xl: 1.25rem;
+            --text-lg: 1.125rem;
+            --text-base: 1rem;
+            --text-sm: 0.875rem;
+            --text-xs: 0.75rem;
+            
+            /* Spacing */
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            --spacing-3xl: 4rem;
+            
+            /* Transitions */
+            --transition-fast: all 0.15s ease;
+            --transition-base: all 0.2s ease;
+            --transition-slow: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-primary);
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-lg);
+        }
+        
+        .page-header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: var(--spacing-lg) 0;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .page-title {
+            font-size: var(--text-3xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .page-description {
+            font-size: var(--text-base);
+            color: var(--text-secondary);
+        }
+        
+        .toolbar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            display: flex;
+            gap: var(--spacing-lg);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .search-group {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
+        
+        .form-label {
+            font-size: var(--text-sm);
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+        
+        .form-input {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: var(--text-sm);
+            background: var(--surface);
+            transition: var(--transition-base);
+            min-width: 200px;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: var(--text-sm);
+            cursor: pointer;
+            transition: var(--transition-base);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            text-decoration: none;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .organization-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: var(--spacing-xl);
+            overflow-x: auto;
+        }
+        
+        .tree {
+            font-family: var(--font-primary);
+        }
+        
+        .tree-node {
+            position: relative;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+        
+        .tree-node::before,
+        .tree-node::after {
+            content: '';
+            position: absolute;
+            left: -20px;
+            border-left: 1px solid var(--border);
+        }
+        
+        .tree-node::before {
+            border-bottom: 1px solid var(--border);
+            top: 0;
+            width: 15px;
+            height: 50%;
+        }
+        
+        .tree-node::after {
+            top: 0;
+            bottom: -7px;
+        }
+        
+        .tree-node:last-child::after {
+            height: 50%;
+        }
+        
+        .tree-node:first-child::after {
+            top: 50%;
+        }
+        
+        .member-card {
+            display: inline-block;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: var(--spacing-md);
+            margin: var(--spacing-xs) 0;
+            min-width: 280px;
+            cursor: pointer;
+            transition: var(--transition-base);
+            position: relative;
+        }
+        
+        .member-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .member-card.root {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .member-header {
+            display: flex;
+            justify-content: between;
+            align-items: flex-start;
+            gap: var(--spacing-sm);
+        }
+        
+        .member-info {
+            flex: 1;
+        }
+        
+        .member-number {
+            font-size: var(--text-xs);
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        
+        .member-card.root .member-number {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .member-name {
+            font-size: var(--text-base);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: var(--spacing-xs) 0;
+        }
+        
+        .member-card.root .member-name {
+            color: white;
+        }
+        
+        .member-details {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+            margin-top: var(--spacing-xs);
+        }
+        
+        .member-title {
+            background: var(--primary);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: var(--text-xs);
+            font-weight: 500;
+        }
+        
+        .member-card.root .member-title {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .member-title.start { background: #6b7280; }
+        .member-title.leader { background: #059669; }
+        .member-title.sub-manager { background: #0284c7; }
+        .member-title.manager { background: #7c3aed; }
+        .member-title.expert-manager { background: #dc2626; }
+        .member-title.director { background: #ea580c; }
+        .member-title.area-director { background: #ca8a04; }
+        
+        .member-plan {
+            background: var(--border-light);
+            color: var(--text-secondary);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: var(--text-xs);
+            font-weight: 500;
+        }
+        
+        .member-card.root .member-plan {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .expand-toggle {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: var(--text-xs);
+            color: var(--text-secondary);
+            transition: var(--transition-base);
+        }
+        
+        .expand-toggle:hover {
+            background: var(--border-light);
+        }
+        
+        .expand-toggle.expanded {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .children {
+            margin-left: 40px;
+            margin-top: var(--spacing-md);
+            position: relative;
+        }
+        
+        .children.collapsed {
+            display: none;
+        }
+        
+        .downline-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--warning);
+            color: white;
+            font-size: var(--text-xs);
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
+        
+        .member-card.root .downline-count {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+        
+        .legend {
+            background: var(--info-bg);
+            border: 1px solid var(--info);
+            border-radius: 8px;
+            padding: var(--spacing-lg);
+            margin-top: var(--spacing-xl);
+        }
+        
+        .legend-title {
+            font-size: var(--text-lg);
+            font-weight: 600;
+            color: var(--info);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-sm);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        
+        .legend-text {
+            font-size: var(--text-sm);
+            color: var(--text-secondary);
+        }
+        
+        /* レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 var(--spacing-md);
+            }
+            
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: var(--spacing-md);
+            }
+            
+            .search-group {
+                flex-direction: column;
+                align-items: stretch;
+                gap: var(--spacing-xs);
+            }
+            
+            .form-input {
+                min-width: auto;
+                width: 100%;
+            }
+            
+            .member-card {
+                min-width: auto;
+                width: 100%;
+            }
+            
+            .children {
+                margin-left: var(--spacing-lg);
+            }
+        }
+        
+        /* アクセシビリティ対応 */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        
+        .focus-ring:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!--
+    【CF_06引き継ぎ情報】
+    UI要件: MLM組織をツリー形式で表示し、ノードの展開/折りたたみ、会員詳細へのリンクを提供
+    必要API: GET /api/organization/tree - 組織ツリー全体取得
+    必要API: GET /api/organization/tree/{member_id} - 特定会員配下のツリー取得
+    必要API: GET /api/organization/member/{member_id}/downline - 直下メンバー一覧
+    入力データ: { member_id?: string }
+    出力データ: { 
+        member_id: string,
+        member_number: string,
+        name: string, 
+        title: string,
+        plan: string,
+        children: OrganizationTreeModel[]
+    }
+    UI文脈: ツリーノード展開時は部分取得、会員カードクリック時は会員詳細ページ（P-002）へ遷移
+    特記事項: ツリー展開は非同期で子ノードを取得、MLMタイトル体系に応じた色分け表示
+    -->
+    
+    <div class="page-header">
+        <div class="container">
+            <h1 class="page-title">組織図ビューア</h1>
+            <p class="page-description">MLM組織をツリー形式で視覚的に表示し、階層構造を把握できます</p>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="toolbar">
+            <div class="search-group">
+                <label class="form-label" for="member-search">会員検索:</label>
+                <input type="text" id="member-search" class="form-input focus-ring" placeholder="会員番号または氏名で検索">
+                <button class="btn btn-primary">🔍 検索</button>
+            </div>
+            
+            <div class="search-group">
+                <label class="form-label" for="root-member">ルート選択:</label>
+                <select id="root-member" class="form-input focus-ring">
+                    <option value="">全体表示</option>
+                    <option value="0000001">0000001 - 田中太郎 (エリアディレクター)</option>
+                    <option value="0000005">0000005 - 佐藤花子 (ディレクター)</option>
+                </select>
+            </div>
+            
+            <div class="search-group">
+                <button class="btn btn-secondary">📤 組織図エクスポート</button>
+                <button class="btn btn-secondary">🔄 全て展開</button>
+                <button class="btn btn-secondary">📁 全て折りたたみ</button>
+            </div>
+        </div>
+        
+        <div class="organization-container">
+            <ul class="tree">
+                <!-- ルートメンバー -->
+                <li class="tree-node">
+                    <div class="member-card root" onclick="navigateToMember('0000001')">
+                        <div class="member-header">
+                            <div class="member-info">
+                                <div class="member-number">#0000001</div>
+                                <div class="member-name">田中 太郎</div>
+                                <div class="member-details">
+                                    <span class="member-title area-director">エリアディレクター</span>
+                                    <span class="member-plan">ヒーロープラン</span>
+                                </div>
+                            </div>
+                            <button class="expand-toggle expanded" onclick="toggleNode(event, 'node-1')">−</button>
+                            <div class="downline-count">12</div>
+                        </div>
+                    </div>
+                    
+                    <ul class="children" id="node-1">
+                        <li class="tree-node">
+                            <div class="member-card" onclick="navigateToMember('0000002')">
+                                <div class="member-header">
+                                    <div class="member-info">
+                                        <div class="member-number">#0000002</div>
+                                        <div class="member-name">佐藤 花子</div>
+                                        <div class="member-details">
+                                            <span class="member-title director">ディレクター</span>
+                                            <span class="member-plan">ヒーロープラン</span>
+                                        </div>
+                                    </div>
+                                    <button class="expand-toggle expanded" onclick="toggleNode(event, 'node-2')">−</button>
+                                    <div class="downline-count">5</div>
+                                </div>
+                            </div>
+                            
+                            <ul class="children" id="node-2">
+                                <li class="tree-node">
+                                    <div class="member-card" onclick="navigateToMember('0000003')">
+                                        <div class="member-header">
+                                            <div class="member-info">
+                                                <div class="member-number">#0000003</div>
+                                                <div class="member-name">山田 次郎</div>
+                                                <div class="member-details">
+                                                    <span class="member-title expert-manager">エキスパートマネージャー</span>
+                                                    <span class="member-plan">ヒーロープラン</span>
+                                                </div>
+                                            </div>
+                                            <button class="expand-toggle" onclick="toggleNode(event, 'node-3')">+</button>
+                                            <div class="downline-count">2</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <ul class="children collapsed" id="node-3">
+                                        <li class="tree-node">
+                                            <div class="member-card" onclick="navigateToMember('0000007')">
+                                                <div class="member-header">
+                                                    <div class="member-info">
+                                                        <div class="member-number">#0000007</div>
+                                                        <div class="member-name">高橋 美咲</div>
+                                                        <div class="member-details">
+                                                            <span class="member-title manager">マネージャー</span>
+                                                            <span class="member-plan">テストプラン</span>
+                                                        </div>
+                                                    </div>
+                                                    <button class="expand-toggle" onclick="toggleNode(event, 'node-7')">+</button>
+                                                    <div class="downline-count">1</div>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <li class="tree-node">
+                                            <div class="member-card" onclick="navigateToMember('0000008')">
+                                                <div class="member-header">
+                                                    <div class="member-info">
+                                                        <div class="member-number">#0000008</div>
+                                                        <div class="member-name">渡辺 健一</div>
+                                                        <div class="member-details">
+                                                            <span class="member-title sub-manager">サブマネージャー</span>
+                                                            <span class="member-plan">ヒーロープラン</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="downline-count">0</div>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </li>
+                                
+                                <li class="tree-node">
+                                    <div class="member-card" onclick="navigateToMember('0000004')">
+                                        <div class="member-header">
+                                            <div class="member-info">
+                                                <div class="member-number">#0000004</div>
+                                                <div class="member-name">伊藤 三郎</div>
+                                                <div class="member-details">
+                                                    <span class="member-title manager">マネージャー</span>
+                                                    <span class="member-plan">ヒーロープラン</span>
+                                                </div>
+                                            </div>
+                                            <button class="expand-toggle" onclick="toggleNode(event, 'node-4')">+</button>
+                                            <div class="downline-count">3</div>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </li>
+                        
+                        <li class="tree-node">
+                            <div class="member-card" onclick="navigateToMember('0000005')">
+                                <div class="member-header">
+                                    <div class="member-info">
+                                        <div class="member-number">#0000005</div>
+                                        <div class="member-name">中村 智美</div>
+                                        <div class="member-details">
+                                            <span class="member-title sub-manager">サブマネージャー</span>
+                                            <span class="member-plan">テストプラン</span>
+                                        </div>
+                                    </div>
+                                    <button class="expand-toggle" onclick="toggleNode(event, 'node-5')">+</button>
+                                    <div class="downline-count">7</div>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="legend">
+            <h3 class="legend-title">MLMタイトル体系</h3>
+            <div class="legend-grid">
+                <div class="legend-item">
+                    <div class="legend-color start" style="background: #6b7280;"></div>
+                    <span class="legend-text">スタート</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color leader" style="background: #059669;"></div>
+                    <span class="legend-text">リーダー</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color sub-manager" style="background: #0284c7;"></div>
+                    <span class="legend-text">サブマネージャー</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color manager" style="background: #7c3aed;"></div>
+                    <span class="legend-text">マネージャー</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color expert-manager" style="background: #dc2626;"></div>
+                    <span class="legend-text">エキスパートマネージャー</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color director" style="background: #ea580c;"></div>
+                    <span class="legend-text">ディレクター</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color area-director" style="background: #ca8a04;"></div>
+                    <span class="legend-text">エリアディレクター</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ツリーノードの展開/折りたたみ
+        function toggleNode(event, nodeId) {
+            event.stopPropagation();
+            const children = document.getElementById(nodeId);
+            const toggle = event.target;
+            
+            if (children.classList.contains('collapsed')) {
+                children.classList.remove('collapsed');
+                toggle.textContent = '−';
+                toggle.classList.add('expanded');
+                
+                // 実際の実装では、ここでAPIから子ノードを取得
+                // loadChildNodes(nodeId);
+            } else {
+                children.classList.add('collapsed');
+                toggle.textContent = '+';
+                toggle.classList.remove('expanded');
+            }
+        }
+        
+        // 会員詳細ページへの遷移
+        function navigateToMember(memberId) {
+            // 実際の実装では、React Routerやページ遷移を使用
+            console.log(`Navigate to member detail: ${memberId}`);
+            // window.location.href = `/members/${memberId}`;
+            alert(`会員詳細ページへ遷移します\n会員ID: ${memberId}`);
+        }
+        
+        // 子ノードの動的読み込み（実装例）
+        async function loadChildNodes(nodeId) {
+            try {
+                // API呼び出しのシミュレーション
+                console.log(`Loading children for node: ${nodeId}`);
+                // const response = await fetch(`/api/organization/member/${memberId}/downline`);
+                // const children = await response.json();
+                // renderChildNodes(nodeId, children);
+            } catch (error) {
+                console.error('Failed to load child nodes:', error);
+            }
+        }
+        
+        // 会員検索機能
+        document.getElementById('member-search').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const memberCards = document.querySelectorAll('.member-card');
+            
+            memberCards.forEach(card => {
+                const memberNumber = card.querySelector('.member-number').textContent;
+                const memberName = card.querySelector('.member-name').textContent;
+                const isMatch = memberNumber.toLowerCase().includes(searchTerm) || 
+                               memberName.toLowerCase().includes(searchTerm);
+                
+                card.style.opacity = searchTerm === '' || isMatch ? '1' : '0.3';
+            });
+        });
+        
+        // 全て展開/折りたたみ機能
+        document.querySelectorAll('.btn-secondary').forEach(btn => {
+            if (btn.textContent.includes('全て展開')) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.children').forEach(children => {
+                        children.classList.remove('collapsed');
+                    });
+                    document.querySelectorAll('.expand-toggle').forEach(toggle => {
+                        toggle.textContent = '−';
+                        toggle.classList.add('expanded');
+                    });
+                });
+            } else if (btn.textContent.includes('全て折りたたみ')) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.children').forEach(children => {
+                        children.classList.add('collapsed');
+                    });
+                    document.querySelectorAll('.expand-toggle').forEach(toggle => {
+                        toggle.textContent = '+';
+                        toggle.classList.remove('expanded');
+                    });
+                });
+            }
+        });
+        
+        // ルート選択機能
+        document.getElementById('root-member').addEventListener('change', function(e) {
+            const selectedMemberId = e.target.value;
+            console.log(`Root member changed to: ${selectedMemberId || 'all'}`);
+            // 実際の実装では、APIを呼び出して組織ツリーを再構築
+            // if (selectedMemberId) {
+            //     loadOrganizationTree(selectedMemberId);
+            // } else {
+            //     loadOrganizationTree();
+            // }
+        });
+    </script>
+</body>
+</html>

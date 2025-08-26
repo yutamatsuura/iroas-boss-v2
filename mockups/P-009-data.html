@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P-009 データ入出力 - IROAS BOSS v2</title>
+    
+    <style>
+        /* グローバルCSS変数 */
+        :root {
+            /* カラーパレット */
+            --primary: #1e3a8a;
+            --primary-hover: #1e40af;
+            --primary-light: #3b82f6;
+            --secondary: #3b82f6;
+            --secondary-hover: #2563eb;
+            --secondary-light: #60a5fa;
+            
+            --background: #f1f5f9;
+            --surface: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --border-light: #e2e8f0;
+            
+            --success: #10b981;
+            --success-bg: #f0fdf4;
+            --warning: #f59e0b;
+            --warning-bg: #fffbeb;
+            --error: #ef4444;
+            --error-bg: #fef2f2;
+            --info: #3b82f6;
+            --info-bg: #eff6ff;
+            
+            /* スペーシング */
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            --spacing-3xl: 4rem;
+            
+            /* フォント */
+            --font-primary: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+            --text-3xl: 1.875rem;
+            --text-2xl: 1.5rem;
+            --text-xl: 1.25rem;
+            --text-lg: 1.125rem;
+            --text-base: 1rem;
+            --text-sm: 0.875rem;
+            --text-xs: 0.75rem;
+            
+            /* トランジション */
+            --transition-fast: all 0.15s ease;
+            --transition-base: all 0.2s ease;
+            --transition-slow: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-primary);
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        /* レイアウト */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-lg);
+        }
+        
+        .page-header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: var(--spacing-xl) 0;
+            margin-bottom: var(--spacing-2xl);
+        }
+        
+        .page-title {
+            font-size: var(--text-3xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .page-description {
+            font-size: var(--text-lg);
+            color: var(--text-secondary);
+        }
+        
+        /* グリッド */
+        .grid {
+            display: grid;
+            gap: var(--spacing-lg);
+        }
+        
+        .grid-cols-1 { grid-template-columns: 1fr; }
+        .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+        
+        /* カード */
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: var(--spacing-lg);
+            transition: var(--transition-base);
+        }
+        
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card-header {
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .card-title {
+            font-size: var(--text-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .card-subtitle {
+            font-size: var(--text-sm);
+            color: var(--text-secondary);
+        }
+        
+        /* フォーム要素 */
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--text-sm);
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .file-upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: var(--spacing-2xl);
+            text-align: center;
+            background: var(--background);
+            transition: var(--transition-base);
+            cursor: pointer;
+        }
+        
+        .file-upload-area:hover {
+            border-color: var(--primary);
+            background: var(--info-bg);
+        }
+        
+        .file-upload-area.dragover {
+            border-color: var(--primary);
+            background: var(--info-bg);
+        }
+        
+        .file-upload-icon {
+            font-size: 3rem;
+            color: var(--text-muted);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .file-upload-text {
+            font-size: var(--text-lg);
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .file-upload-hint {
+            font-size: var(--text-sm);
+            color: var(--text-muted);
+        }
+        
+        /* ボタン */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: var(--text-base);
+            cursor: pointer;
+            transition: var(--transition-base);
+            text-decoration: none;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #0d9488;
+        }
+        
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #d97706;
+        }
+        
+        .btn-error {
+            background: var(--error);
+            color: white;
+        }
+        
+        .btn-error:hover {
+            background: #dc2626;
+        }
+        
+        /* アラート */
+        .alert {
+            padding: var(--spacing-md);
+            border-radius: 8px;
+            margin-bottom: var(--spacing-md);
+            font-size: var(--text-sm);
+        }
+        
+        .alert-info {
+            background: var(--info-bg);
+            color: var(--info);
+            border: 1px solid var(--info);
+        }
+        
+        .alert-success {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+        
+        .alert-warning {
+            background: var(--warning-bg);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+        
+        .alert-error {
+            background: var(--error-bg);
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+        
+        /* テーブル */
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface);
+        }
+        
+        .table th,
+        .table td {
+            padding: var(--spacing-md);
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .table th {
+            background: var(--background);
+            font-weight: 600;
+            color: var(--text-primary);
+            position: sticky;
+            top: 0;
+        }
+        
+        .table td {
+            color: var(--text-secondary);
+        }
+        
+        .table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .table tr:hover {
+            background: var(--border-light);
+        }
+        
+        /* ステータスバッジ */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: var(--text-xs);
+            font-weight: 500;
+        }
+        
+        .status-success {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+        
+        .status-warning {
+            background: var(--warning-bg);
+            color: var(--warning);
+        }
+        
+        .status-error {
+            background: var(--error-bg);
+            color: var(--error);
+        }
+        
+        /* アイコン */
+        .icon {
+            width: 1.2em;
+            height: 1.2em;
+            fill: currentColor;
+        }
+        
+        /* プログレスバー */
+        .progress {
+            background: var(--border-light);
+            border-radius: 8px;
+            height: 8px;
+            overflow: hidden;
+            margin: var(--spacing-sm) 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .grid-cols-2,
+            .grid-cols-3 {
+                grid-template-columns: 1fr;
+            }
+            
+            .page-title {
+                font-size: var(--text-2xl);
+            }
+            
+            .card {
+                padding: var(--spacing-md);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <h1 class="page-title">データ入出力</h1>
+            <p class="page-description">初期データ移行、システムバックアップ・リストア管理</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="grid grid-cols-1">
+            <!-- 機能説明 -->
+            <div class="alert alert-info">
+                <strong>主要機能：</strong>
+                Googleスプレッドシートからの会員データインポート、データベースの日次自動バックアップ・手動バックアップ、バックアップからのリストア機能を提供します。
+            </div>
+            
+            <div class="grid grid-cols-2">
+                <!-- データインポート -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                            </svg>
+                            会員データインポート
+                        </h2>
+                        <p class="card-subtitle">Googleスプレッドシート形式の会員データを一括登録</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">CSVファイル選択（UTF-8 または Shift-JIS）</label>
+                        <div class="file-upload-area" id="importUpload">
+                            <div class="file-upload-icon">📊</div>
+                            <div class="file-upload-text">ここにファイルをドロップまたはクリックして選択</div>
+                            <div class="file-upload-hint">対応形式: CSV (.csv) 最大ファイルサイズ: 10MB</div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning" style="margin-bottom: var(--spacing-lg);">
+                        <strong>注意：</strong>インポート前に既存データのバックアップを推奨します。重複する会員番号がある場合は上書きされます。
+                    </div>
+                    
+                    <div class="form-group">
+                        <button class="btn btn-primary" id="startImport" disabled>
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18C19.1,20 20,19.1 20,18Z"/>
+                            </svg>
+                            インポート開始
+                        </button>
+                    </div>
+                    
+                    <!-- プログレス表示（通常は非表示） -->
+                    <div id="importProgress" style="display: none;">
+                        <div class="progress">
+                            <div class="progress-bar" style="width: 0%"></div>
+                        </div>
+                        <p style="font-size: var(--text-sm); color: var(--text-muted); text-align: center;">
+                            処理中... <span id="importProgressText">0/0</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- バックアップ管理 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
+                            </svg>
+                            データベースバックアップ
+                        </h2>
+                        <p class="card-subtitle">システムデータの安全な保護・復元</p>
+                    </div>
+                    
+                    <div class="alert alert-info" style="margin-bottom: var(--spacing-lg);">
+                        <strong>自動バックアップ：</strong>毎日 03:00 に自動実行されます。過去30日分を保持。
+                    </div>
+                    
+                    <div class="form-group">
+                        <button class="btn btn-success" id="createBackup">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                            </svg>
+                            手動バックアップ作成
+                        </button>
+                    </div>
+                    
+                    <!-- バックアップ進行状況（通常は非表示） -->
+                    <div id="backupProgress" style="display: none;">
+                        <div class="progress">
+                            <div class="progress-bar" style="width: 0%"></div>
+                        </div>
+                        <p style="font-size: var(--text-sm); color: var(--text-muted); text-align: center;">
+                            バックアップ作成中...
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- バックアップ一覧 -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M12,2L2,7V10C2,16.11 6.69,21.42 12,23C17.31,21.42 22,16.11 22,10V7L12,2M12,4.32L20,8.27V10C20,15.24 16.39,19.81 12,21.24C7.61,19.81 4,15.24 4,10V8.27L12,4.32Z"/>
+                        </svg>
+                        バックアップ履歴
+                    </h2>
+                    <p class="card-subtitle">作成済みバックアップの管理・リストア</p>
+                </div>
+                
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>作成日時</th>
+                                <th>タイプ</th>
+                                <th>ファイルサイズ</th>
+                                <th>データ件数</th>
+                                <th>ステータス</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>2024-08-26 03:00:15</td>
+                                <td>自動バックアップ</td>
+                                <td>2.3MB</td>
+                                <td>
+                                    会員: 50件<br>
+                                    決済履歴: 1,245件<br>
+                                    報酬計算: 312件
+                                </td>
+                                <td><span class="status-badge status-success">完了</span></td>
+                                <td>
+                                    <button class="btn btn-warning" onclick="confirmRestore('backup_20240826_030015')">
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path d="M12,3A9,9 0 0,0 3,12H0L4,16L8,12H5A7,7 0 0,1 12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19V21A9,9 0 0,0 21,12A9,9 0 0,0 12,3Z"/>
+                                        </svg>
+                                        リストア
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>2024-08-25 15:23:42</td>
+                                <td>手動バックアップ</td>
+                                <td>2.2MB</td>
+                                <td>
+                                    会員: 50件<br>
+                                    決済履歴: 1,198件<br>
+                                    報酬計算: 298件
+                                </td>
+                                <td><span class="status-badge status-success">完了</span></td>
+                                <td>
+                                    <button class="btn btn-warning" onclick="confirmRestore('backup_20240825_152342')">
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path d="M12,3A9,9 0 0,0 3,12H0L4,16L8,12H5A7,7 0 0,1 12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19V21A9,9 0 0,0 21,12A9,9 0 0,0 12,3Z"/>
+                                        </svg>
+                                        リストア
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>2024-08-25 03:00:11</td>
+                                <td>自動バックアップ</td>
+                                <td>2.1MB</td>
+                                <td>
+                                    会員: 50件<br>
+                                    決済履歴: 1,156件<br>
+                                    報酬計算: 287件
+                                </td>
+                                <td><span class="status-badge status-success">完了</span></td>
+                                <td>
+                                    <button class="btn btn-warning" onclick="confirmRestore('backup_20240825_030011')">
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path d="M12,3A9,9 0 0,0 3,12H0L4,16L8,12H5A7,7 0 0,1 12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19V21A9,9 0 0,0 21,12A9,9 0 0,0 12,3Z"/>
+                                        </svg>
+                                        リストア
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>2024-08-24 03:00:08</td>
+                                <td>自動バックアップ</td>
+                                <td>2.0MB</td>
+                                <td>
+                                    会員: 49件<br>
+                                    決済履歴: 1,089件<br>
+                                    報酬計算: 268件
+                                </td>
+                                <td><span class="status-badge status-success">完了</span></td>
+                                <td>
+                                    <button class="btn btn-warning" onclick="confirmRestore('backup_20240824_030008')">
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path d="M12,3A9,9 0 0,0 3,12H0L4,16L8,12H5A7,7 0 0,1 12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19V21A9,9 0 0,0 21,12A9,9 0 0,0 12,3Z"/>
+                                        </svg>
+                                        リストア
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 確認モーダル -->
+    <div id="confirmModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: var(--surface); padding: var(--spacing-2xl); border-radius: 12px; max-width: 500px; width: 90%;">
+            <h3 style="margin-bottom: var(--spacing-lg); color: var(--text-primary);">リストア確認</h3>
+            <div class="alert alert-warning" style="margin-bottom: var(--spacing-lg);">
+                <strong>注意：</strong>この操作により現在のデータは完全に置き換えられます。この操作は取り消しできません。
+            </div>
+            <p style="margin-bottom: var(--spacing-xl); color: var(--text-secondary);">
+                選択されたバックアップ: <strong id="selectedBackup"></strong><br>
+                本当にリストアを実行しますか？
+            </p>
+            <div style="display: flex; gap: var(--spacing-md); justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeModal()">キャンセル</button>
+                <button class="btn btn-error" onclick="executeRestore()">リストア実行</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成功・エラーメッセージ表示用 -->
+    <div id="messageArea" style="position: fixed; top: 20px; right: 20px; z-index: 1001; max-width: 400px;"></div>
+
+    <script>
+        // グローバル変数
+        let selectedFile = null;
+        let currentBackupId = null;
+
+        // ファイルアップロード処理
+        const uploadArea = document.getElementById('importUpload');
+        const startImportBtn = document.getElementById('startImport');
+
+        uploadArea.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.csv';
+            input.onchange = handleFileSelect;
+            input.click();
+        });
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFileSelect({ target: { files: e.dataTransfer.files } });
+        });
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file && file.name.endsWith('.csv')) {
+                selectedFile = file;
+                uploadArea.innerHTML = `
+                    <div class="file-upload-icon">✅</div>
+                    <div class="file-upload-text">選択されたファイル: ${file.name}</div>
+                    <div class="file-upload-hint">サイズ: ${(file.size / 1024).toFixed(1)}KB</div>
+                `;
+                startImportBtn.disabled = false;
+            } else {
+                showMessage('CSVファイルを選択してください。', 'error');
+            }
+        }
+
+        // インポート実行
+        startImportBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            startImportBtn.disabled = true;
+            document.getElementById('importProgress').style.display = 'block';
+            
+            try {
+                // 実際の実装では FormData を使用して API に送信
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                
+                // モック実行（実際はAPIコール）
+                await simulateImport();
+                
+                showMessage('会員データのインポートが完了しました。', 'success');
+                resetImportForm();
+            } catch (error) {
+                showMessage('インポート処理中にエラーが発生しました：' + error.message, 'error');
+            } finally {
+                startImportBtn.disabled = false;
+                document.getElementById('importProgress').style.display = 'none';
+            }
+        });
+
+        // バックアップ作成
+        document.getElementById('createBackup').addEventListener('click', async () => {
+            const btn = document.getElementById('createBackup');
+            btn.disabled = true;
+            document.getElementById('backupProgress').style.display = 'block';
+            
+            try {
+                // モック実行（実際はAPIコール）
+                await simulateBackup();
+                showMessage('手動バックアップが正常に作成されました。', 'success');
+                
+                // テーブルを更新（実際はAPIから最新データを取得）
+                updateBackupTable();
+            } catch (error) {
+                showMessage('バックアップ作成中にエラーが発生しました：' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                document.getElementById('backupProgress').style.display = 'none';
+            }
+        });
+
+        // リストア確認
+        function confirmRestore(backupId) {
+            currentBackupId = backupId;
+            document.getElementById('selectedBackup').textContent = backupId;
+            const modal = document.getElementById('confirmModal');
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+            currentBackupId = null;
+        }
+
+        // リストア実行
+        async function executeRestore() {
+            if (!currentBackupId) return;
+            
+            closeModal();
+            
+            try {
+                // モック実行（実際はAPIコール）
+                await simulateRestore(currentBackupId);
+                showMessage('データのリストアが完了しました。ページを再読み込みしてください。', 'success');
+            } catch (error) {
+                showMessage('リストア処理中にエラーが発生しました：' + error.message, 'error');
+            }
+        }
+
+        // ヘルパー関数
+        function showMessage(message, type) {
+            const messageArea = document.getElementById('messageArea');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            messageArea.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        function resetImportForm() {
+            selectedFile = null;
+            uploadArea.innerHTML = `
+                <div class="file-upload-icon">📊</div>
+                <div class="file-upload-text">ここにファイルをドロップまたはクリックして選択</div>
+                <div class="file-upload-hint">対応形式: CSV (.csv) 最大ファイルサイズ: 10MB</div>
+            `;
+            startImportBtn.disabled = true;
+        }
+
+        // モック関数（実際の実装では削除）
+        async function simulateImport() {
+            const progressBar = document.querySelector('#importProgress .progress-bar');
+            const progressText = document.getElementById('importProgressText');
+            
+            for (let i = 0; i <= 100; i += 10) {
+                progressBar.style.width = i + '%';
+                progressText.textContent = `${Math.floor(i/10)}/10 レコード処理中`;
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+        }
+
+        async function simulateBackup() {
+            const progressBar = document.querySelector('#backupProgress .progress-bar');
+            
+            for (let i = 0; i <= 100; i += 20) {
+                progressBar.style.width = i + '%';
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+        }
+
+        async function simulateRestore(backupId) {
+            // 実際の処理では時間がかかることを示すローディング表示等
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+
+        function updateBackupTable() {
+            // 実際の実装では API から最新のバックアップ一覧を取得してテーブルを更新
+            console.log('Updating backup table...');
+        }
+    </script>
+
+    <!-- 
+    【CF_06引き継ぎ情報】
+    UI要件: ファイルアップロード、バックアップ作成・リストア操作
+    
+    必要API:
+    - POST /api/data/import/members
+      入力データ: { file: File (multipart/form-data) }
+      出力データ: { success: boolean, imported_count: number, errors: string[] }
+      UI文脈: ファイル選択→プログレス表示→結果表示
+    
+    - POST /api/data/backup  
+      入力データ: {}
+      出力データ: { id: number, filename: string, size: number, created_at: string }
+      UI文脈: ボタンクリック→プログレス表示→完了通知
+    
+    - GET /api/data/backups
+      入力データ: {}
+      出力データ: { backups: Array<{id, filename, size, type, created_at, status}> }
+      UI文脈: ページロード時とバックアップ作成後の一覧更新
+    
+    - POST /api/data/restore/{backup_id}
+      入力データ: { backup_id: number }
+      出力データ: { success: boolean, restored_count: object }
+      UI文脈: 確認モーダル→実行→完了/エラー表示
+    
+    特記事項:
+    - ファイルアップロードはmultipart/form-data形式
+    - バックアップ・リストア処理は非同期で時間がかかる可能性
+    - リストアは危険な操作のため確認モーダル必須
+    - CSV形式はShift-JIS対応が必要
+    - プログレス表示でユーザビリティ向上
+    -->
+</body>
+</html>
