@@ -92,7 +92,7 @@ class RewardCalculationRequest(BaseModel):
     報酬計算実行リクエストスキーマ
     API 4.2: POST /api/rewards/calculate
     """
-    calculation_month: str = Field(..., regex=r'^\d{4}-\d{2}$', description="計算対象月（YYYY-MM）")
+    calculation_month: str = Field(..., pattern=r'^\d{4}-\d{2}$', description="計算対象月（YYYY-MM）")
     calculation_type: str = Field(default="all", description="計算タイプ")
     
     # ボーナス選択（部分計算用）

@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
 from datetime import datetime, timedelta
 
-from app.models.activity import ActivityLog, ActionType, LogLevel
+from app.models.activity import ActivityLog, ActivityType
 from app.schemas.activity import (
     ActivityLogResponse,
     ActivityLogListResponse,

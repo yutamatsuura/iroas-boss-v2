@@ -74,7 +74,7 @@ class PaymentExportRequest(BaseModel):
     決済CSV出力リクエストスキーマ
     API 3.3-3.4: POST /api/payments/export/{card|transfer}
     """
-    target_month: str = Field(..., regex=r'^\d{4}-\d{2}$', description="対象月（YYYY-MM）")
+    target_month: str = Field(..., pattern=r'^\d{4}-\d{2}$', description="対象月（YYYY-MM）")
     export_type: PaymentTypeEnum = Field(..., description="出力種別")
     
     @validator('target_month')
@@ -135,7 +135,7 @@ class ManualPaymentRequest(BaseModel):
     手動決済記録リクエストスキーマ
     API 3.6: POST /api/payments/manual
     """
-    member_number: str = Field(..., regex=r'^\d{7}$', description="会員番号（7桁）")
+    member_number: str = Field(..., pattern=r'^\d{7}$', description="会員番号（7桁）")
     payment_type: PaymentTypeEnum = Field(..., description="決済種別（銀行振込/インフォカート）")
     amount: Decimal = Field(..., gt=0, le=999999, description="決済金額")
     payment_date: datetime = Field(..., description="決済日")
@@ -204,7 +204,7 @@ class PaymentHistorySearch(BaseModel):
     API 3.7: GET /api/payments/history（検索パラメータ）
     """
     # 検索条件
-    member_number: Optional[str] = Field(default=None, regex=r'^\d{7}$', description="会員番号")
+    member_number: Optional[str] = Field(default=None, pattern=r'^\d{7}$', description="会員番号")
     member_name: Optional[str] = Field(default=None, description="会員氏名（部分一致）")
     
     # フィルター条件
@@ -225,7 +225,7 @@ class PaymentHistorySearch(BaseModel):
     
     # ソート
     sort_by: Optional[str] = Field(default="payment_date", description="ソート項目")
-    sort_order: Optional[str] = Field(default="desc", regex=r'^(asc|desc)$', description="ソート順序")
+    sort_order: Optional[str] = Field(default="desc", pattern=r'^(asc|desc)$', description="ソート順序")
 
 
 class PaymentSummary(BaseModel):

@@ -130,7 +130,7 @@ class ActivityLogSearch(BaseModel):
     
     # ソート
     sort_by: Optional[str] = Field(default="created_at", description="ソート項目")
-    sort_order: Optional[str] = Field(default="desc", regex=r'^(asc|desc)$', description="ソート順序")
+    sort_order: Optional[str] = Field(default="desc", pattern=r'^(asc|desc)$', description="ソート順序")
     
     @validator('date_to')
     def validate_date_range(cls, v, values):
@@ -212,9 +212,9 @@ class ActivityLogExportRequest(BaseModel):
     date_to: Optional[datetime] = Field(default=None, description="実行日時（終了）")
     
     # エクスポート形式
-    format: str = Field(default="csv", regex=r'^(csv|excel)$', description="出力形式")
+    format: str = Field(default="csv", pattern=r'^(csv|excel)$', description="出力形式")
     include_details: bool = Field(default=False, description="詳細データを含めるか")
-    encoding: str = Field(default="utf-8", regex=r'^(utf-8|shift_jis)$', description="文字エンコーディング")
+    encoding: str = Field(default="utf-8", pattern=r'^(utf-8|shift_jis)$', description="文字エンコーディング")
     
     # 制限
     max_records: int = Field(default=10000, ge=1, le=100000, description="最大出力件数")

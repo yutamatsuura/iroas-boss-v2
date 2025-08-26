@@ -1,0 +1,53 @@
+{
+  "total_tests": 9,
+  "passed_tests": 8,
+  "success_rate": 88.88888888888889,
+  "grade": "良好 (B)",
+  "results": [
+    {
+      "test_name": "会員データ29項目完全再現",
+      "status": "❌ FAIL",
+      "success": false
+    },
+    {
+      "test_name": "7種類ボーナス計算",
+      "status": "✅ PASS",
+      "success": true
+    },
+    {
+      "test_name": "CSV入出力100%成功率",
+      "status": "✅ PASS",
+      "success": true
+    },
+    {
+      "test_name": "最低支払金額5,000円ルール",
+      "status": "✅ PASS",
+      "success": true
+    },
+    {
+      "test_name": "タイトル体系7段階",
+      "status": "✅ PASS",
+      "success": true
+    },
+    {
+      "test_name": "4種類決済方法対応",
+      "status": "✅ PASS",
+      "success": true
+    },
+    {
+      "test_name": "組織圧縮手動処理",
+      "status": "✅ PASS",
+      "success": true
+    },
+    {
+      "test_name": "P-001～P-009ページ連携",
+      "status": "✅ PASS",
+      "success": true
+    },
+    {
+      "test_name": "会員登録→決済→報酬→支払フロー",
+      "status": "✅ PASS",
+      "success": true
+    }
+  ]
+}

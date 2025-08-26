@@ -21,10 +21,10 @@ from datetime import datetime
 from app.models.member import Member, MemberStatus, Title, UserType, Plan, PaymentMethod, Gender, AccountType
 from app.schemas.member import (
     MemberResponse,
-    MemberListResponse,
-    MemberCreateRequest,
-    MemberUpdateRequest,
-    MemberSearchResponse
+    MemberList,
+    MemberCreate,
+    MemberUpdate,
+    MemberSearch
 )
 from app.services.activity_service import ActivityService
 

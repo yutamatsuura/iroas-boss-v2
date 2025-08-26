@@ -175,7 +175,7 @@ class SponsorChangeRequest(BaseModel):
     API 1.7: PUT /api/members/{id}/sponsor
     組織手動調整機能
     """
-    new_sponsor_member_number: str = Field(..., regex=r'^\d{7}$', description="新しいスポンサーの会員番号")
+    new_sponsor_member_number: str = Field(..., pattern=r'^\d{7}$', description="新しいスポンサーの会員番号")
     change_reason: str = Field(..., min_length=1, max_length=500, description="変更理由（必須）")
     
     # 変更オプション
@@ -237,7 +237,7 @@ class OrganizationSearchRequest(BaseModel):
     """
     # 検索条件
     keyword: Optional[str] = Field(default=None, description="キーワード（会員番号、氏名）")
-    member_number: Optional[str] = Field(default=None, regex=r'^\d{7}$', description="会員番号")
+    member_number: Optional[str] = Field(default=None, pattern=r'^\d{7}$', description="会員番号")
     name: Optional[str] = Field(default=None, description="氏名（部分一致）")
     
     # フィルター条件

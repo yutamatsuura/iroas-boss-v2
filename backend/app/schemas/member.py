@@ -78,7 +78,7 @@ class MemberBase(BaseModel):
     """
     # 基本情報（1-5）
     status: MemberStatusEnum = Field(default=MemberStatusEnum.ACTIVE, description="1.ステータス")
-    member_number: str = Field(..., min_length=7, max_length=7, regex=r'^\d{7}$', description="2.IROAS会員番号（7桁数字）")
+    member_number: str = Field(..., min_length=7, max_length=7, pattern=r'^\d{7}$', description="2.IROAS会員番号（7桁数字）")
     name: str = Field(..., min_length=1, max_length=100, description="3.氏名")
     kana: str = Field(..., min_length=1, max_length=100, description="4.カナ")
     email: EmailStr = Field(..., description="5.メールアドレス")
@@ -96,25 +96,25 @@ class MemberBase(BaseModel):
     # 連絡先情報（12-17）
     phone: Optional[str] = Field(default=None, max_length=20, description="12.電話番号")
     gender: Optional[GenderEnum] = Field(default=None, description="13.性別")
-    postal_code: Optional[str] = Field(default=None, max_length=8, regex=r'^\d{3}-?\d{4}$', description="14.郵便番号")
+    postal_code: Optional[str] = Field(default=None, max_length=8, pattern=r'^\d{3}-?\d{4}$', description="14.郵便番号")
     prefecture: Optional[str] = Field(default=None, max_length=10, description="15.都道府県")
     address2: Optional[str] = Field(default=None, max_length=200, description="16.住所2")
     address3: Optional[str] = Field(default=None, max_length=200, description="17.住所3")
     
     # 組織情報（18-21）
-    upline_id: Optional[str] = Field(default=None, max_length=7, regex=r'^\d{7}$', description="18.直上者ID")
+    upline_id: Optional[str] = Field(default=None, max_length=7, pattern=r'^\d{7}$', description="18.直上者ID")
     upline_name: Optional[str] = Field(default=None, max_length=100, description="19.直上者名")
-    referrer_id: Optional[str] = Field(default=None, max_length=7, regex=r'^\d{7}$', description="20.紹介者ID")
+    referrer_id: Optional[str] = Field(default=None, max_length=7, pattern=r'^\d{7}$', description="20.紹介者ID")
     referrer_name: Optional[str] = Field(default=None, max_length=100, description="21.紹介者名")
     
     # 銀行情報（22-29）
     bank_name: Optional[str] = Field(default=None, max_length=100, description="22.報酬振込先の銀行名")
-    bank_code: Optional[str] = Field(default=None, max_length=4, regex=r'^\d{4}$', description="23.報酬振込先の銀行コード")
+    bank_code: Optional[str] = Field(default=None, max_length=4, pattern=r'^\d{4}$', description="23.報酬振込先の銀行コード")
     branch_name: Optional[str] = Field(default=None, max_length=100, description="24.報酬振込先の支店名")
-    branch_code: Optional[str] = Field(default=None, max_length=3, regex=r'^\d{3}$', description="25.報酬振込先の支店コード")
-    account_number: Optional[str] = Field(default=None, max_length=10, regex=r'^\d+$', description="26.口座番号")
-    yucho_symbol: Optional[str] = Field(default=None, max_length=5, regex=r'^\d{5}$', description="27.ゆうちょの場合の記号")
-    yucho_number: Optional[str] = Field(default=None, max_length=8, regex=r'^\d{1,8}$', description="28.ゆうちょの場合の番号")
+    branch_code: Optional[str] = Field(default=None, max_length=3, pattern=r'^\d{3}$', description="25.報酬振込先の支店コード")
+    account_number: Optional[str] = Field(default=None, max_length=10, pattern=r'^\d+$', description="26.口座番号")
+    yucho_symbol: Optional[str] = Field(default=None, max_length=5, pattern=r'^\d{5}$', description="27.ゆうちょの場合の記号")
+    yucho_number: Optional[str] = Field(default=None, max_length=8, pattern=r'^\d{1,8}$', description="28.ゆうちょの場合の番号")
     account_type: Optional[AccountTypeEnum] = Field(default=None, description="29.口座種別")
     
     # その他（30）
@@ -151,23 +151,23 @@ class MemberUpdate(BaseModel):
     # 連絡先情報
     phone: Optional[str] = Field(default=None, max_length=20, description="12.電話番号")
     gender: Optional[GenderEnum] = Field(default=None, description="13.性別")
-    postal_code: Optional[str] = Field(default=None, max_length=8, regex=r'^\d{3}-?\d{4}$', description="14.郵便番号")
+    postal_code: Optional[str] = Field(default=None, max_length=8, pattern=r'^\d{3}-?\d{4}$', description="14.郵便番号")
     prefecture: Optional[str] = Field(default=None, max_length=10, description="15.都道府県")
     address2: Optional[str] = Field(default=None, max_length=200, description="16.住所2")
     address3: Optional[str] = Field(default=None, max_length=200, description="17.住所3")
     
     # 組織情報（upline系は別APIで更新）
-    referrer_id: Optional[str] = Field(default=None, max_length=7, regex=r'^\d{7}$', description="20.紹介者ID")
+    referrer_id: Optional[str] = Field(default=None, max_length=7, pattern=r'^\d{7}$', description="20.紹介者ID")
     referrer_name: Optional[str] = Field(default=None, max_length=100, description="21.紹介者名")
     
     # 銀行情報
     bank_name: Optional[str] = Field(default=None, max_length=100, description="22.報酬振込先の銀行名")
-    bank_code: Optional[str] = Field(default=None, max_length=4, regex=r'^\d{4}$', description="23.報酬振込先の銀行コード")
+    bank_code: Optional[str] = Field(default=None, max_length=4, pattern=r'^\d{4}$', description="23.報酬振込先の銀行コード")
     branch_name: Optional[str] = Field(default=None, max_length=100, description="24.報酬振込先の支店名")
-    branch_code: Optional[str] = Field(default=None, max_length=3, regex=r'^\d{3}$', description="25.報酬振込先の支店コード")
-    account_number: Optional[str] = Field(default=None, max_length=10, regex=r'^\d+$', description="26.口座番号")
-    yucho_symbol: Optional[str] = Field(default=None, max_length=5, regex=r'^\d{5}$', description="27.ゆうちょの場合の記号")
-    yucho_number: Optional[str] = Field(default=None, max_length=8, regex=r'^\d{1,8}$', description="28.ゆうちょの場合の番号")
+    branch_code: Optional[str] = Field(default=None, max_length=3, pattern=r'^\d{3}$', description="25.報酬振込先の支店コード")
+    account_number: Optional[str] = Field(default=None, max_length=10, pattern=r'^\d+$', description="26.口座番号")
+    yucho_symbol: Optional[str] = Field(default=None, max_length=5, pattern=r'^\d{5}$', description="27.ゆうちょの場合の記号")
+    yucho_number: Optional[str] = Field(default=None, max_length=8, pattern=r'^\d{1,8}$', description="28.ゆうちょの場合の番号")
     account_type: Optional[AccountTypeEnum] = Field(default=None, description="29.口座種別")
     
     # その他
@@ -255,7 +255,7 @@ class MemberSearch(BaseModel):
     
     # ソート
     sort_by: Optional[str] = Field(default="member_number", description="ソート項目")
-    sort_order: Optional[str] = Field(default="asc", regex=r'^(asc|desc)$', description="ソート順序")
+    sort_order: Optional[str] = Field(default="asc", pattern=r'^(asc|desc)$', description="ソート順序")
 
 
 class SponsorChangeRequest(BaseModel):
@@ -263,7 +263,7 @@ class SponsorChangeRequest(BaseModel):
     スポンサー変更リクエストスキーマ
     API 1.7: PUT /api/members/{id}/sponsor
     """
-    new_sponsor_id: str = Field(..., max_length=7, regex=r'^\d{7}$', description="新しいスポンサーの会員番号")
+    new_sponsor_id: str = Field(..., max_length=7, pattern=r'^\d{7}$', description="新しいスポンサーの会員番号")
     reason: Optional[str] = Field(default=None, max_length=500, description="変更理由")
     
     @validator('new_sponsor_id')
