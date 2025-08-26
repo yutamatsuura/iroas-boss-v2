@@ -1,7 +1,7 @@
 # iroas-boss-v2 開発進捗状況
 
 ## 📊 プロジェクト進捗率
-**現在の進捗**: 10/22 ステップ完了 (45.5%)
+**現在の進捗**: 11/22 ステップ完了 (50.0%)
 
 ## 実装計画と環境設定
 iroas-boss-v2の開発は以下のフローに沿って進行します：
@@ -19,7 +19,7 @@ iroas-boss-v2の開発は以下のフローに沿って進行します：
 | 8. 実装計画策定 | ✅ 完了 | 📅 成功への道筋を描く！並列実行可能なPhase分けと実装ロードマップを作成します |
 | 9. データモデル設計 | ✅ 完了 | 🗃️ データの基盤構築！SQLAlchemyモデルとマイグレーションを作成します |
 | 10. API契約定義 | ✅ 完了 | 📄 FastAPIエンドポイント設計！Pydanticスキーマで型安全な契約を作成します |
-| 11. サービス層実装 | ⬜ 未開始 | ⚙️ ビジネスロジック構築！実データで動作する処理とテストを作成します |
+| 11. サービス層実装 | ✅ 完了 | ⚙️ ビジネスロジック構築！Phase A優先実装（6グループ並列実行）完了 |
 | 12. テスト動作保証 | ⬜ 未開始 | ✅ 実データ主義！モックなしで全テストを通過させます |
 | 13. 品質検証 | ⬜ 未開始 | 🛡️ 品質の守護者！誤魔化しのない本物の動作を検証します |
 | 14. 連鎖APIテスト | ⬜ 未開始 | 🔗 エンドツーエンド検証！複数APIの連携動作をテストします |
@@ -148,32 +148,32 @@ iroas-boss-v2の開発は以下のフローに沿って進行します：
 ### 🚀 Phase A-1: 独立API群（最優先・並列実行）
 | 番号 | Phase | エンドポイント | HTTPメソッド | 説明 | 対応ページ | 実装 |
 |------|-------|--------------|-------------|------|----------|------|
-| 7.1 | A-1a | `/api/settings/system` | GET | システム設定 | P-008 | [ ] |
-| 7.2 | A-1a | `/api/settings/business-rules` | GET | ビジネスルール | P-008 | [ ] |
-| 1.1 | A-1b | `/api/members` | GET | 会員一覧取得 | P-002 | [ ] |
-| 1.2 | A-1b | `/api/members` | POST | 新規会員登録 | P-002 | [ ] |
-| 1.3 | A-1b | `/api/members/{id}` | GET | 会員詳細取得 | P-002 | [ ] |
-| 1.4 | A-1b | `/api/members/{id}` | PUT | 会員情報更新 | P-002 | [ ] |
-| 1.6 | A-1b | `/api/members/search` | GET | 会員検索 | P-002 | [ ] |
-| 6.1 | A-1c | `/api/activity/logs` | GET | ログ一覧 | P-007 | [ ] |
-| 6.2 | A-1c | `/api/activity/logs/filter` | GET | ログ検索 | P-007 | [ ] |
-| 6.3 | A-1c | `/api/activity/logs/{id}` | GET | ログ詳細 | P-007 | [ ] |
+| 7.1 | A-1a | `/api/settings/system` | GET | システム設定 | P-008 | ✅ |
+| 7.2 | A-1a | `/api/settings/business-rules` | GET | ビジネスルール | P-008 | ✅ |
+| 1.1 | A-1b | `/api/members` | GET | 会員一覧取得 | P-002 | ✅ |
+| 1.2 | A-1b | `/api/members` | POST | 新規会員登録 | P-002 | ✅ |
+| 1.3 | A-1b | `/api/members/{id}` | GET | 会員詳細取得 | P-002 | ✅ |
+| 1.4 | A-1b | `/api/members/{id}` | PUT | 会員情報更新 | P-002 | ✅ |
+| 1.6 | A-1b | `/api/members/search` | GET | 会員検索 | P-002 | ✅ |
+| 6.1 | A-1c | `/api/activity/logs` | GET | ログ一覧 | P-007 | ✅ |
+| 6.2 | A-1c | `/api/activity/logs/filter` | GET | ログ検索 | P-007 | ✅ |
+| 6.3 | A-1c | `/api/activity/logs/{id}` | GET | ログ詳細 | P-007 | ✅ |
 
 ### 🚀 Phase A-2: 決済基盤API群（並列実行）
 | 番号 | Phase | エンドポイント | HTTPメソッド | 説明 | 対応ページ | 実装 |
 |------|-------|--------------|-------------|------|----------|------|
-| 3.1 | A-2a | `/api/payments/targets/card` | GET | カード決済対象者 | P-004 | [ ] |
-| 3.2 | A-2a | `/api/payments/targets/transfer` | GET | 口座振替対象者 | P-004 | [ ] |
-| 3.6 | A-2b | `/api/payments/manual` | POST | 手動決済記録 | P-004 | [ ] |
-| 3.7 | A-2b | `/api/payments/history` | GET | 決済履歴 | P-004 | [ ] |
+| 3.1 | A-2a | `/api/payments/targets/card` | GET | カード決済対象者 | P-004 | ✅ |
+| 3.2 | A-2a | `/api/payments/targets/transfer` | GET | 口座振替対象者 | P-004 | ✅ |
+| 3.6 | A-2b | `/api/payments/manual` | POST | 手動決済記録 | P-004 | ✅ |
+| 3.7 | A-2b | `/api/payments/history` | GET | 決済履歴 | P-004 | ✅ |
 
 ### 🚀 Phase E-1: データ管理API群（独立・並列実行）
 | 番号 | Phase | エンドポイント | HTTPメソッド | 説明 | 対応ページ | 実装 |
 |------|-------|--------------|-------------|------|----------|------|
-| 8.1 | E-1a | `/api/data/import/members` | POST | 会員インポート | P-009 | [ ] |
-| 8.2 | E-1a | `/api/data/backup` | POST | バックアップ実行 | P-009 | [ ] |
-| 8.3 | E-1a | `/api/data/backups` | GET | バックアップ一覧 | P-009 | [ ] |
-| 8.4 | E-1a | `/api/data/restore/{id}` | POST | リストア実行 | P-009 | [ ] |
+| 8.1 | E-1a | `/api/data/import/members` | POST | 会員インポート | P-009 | ✅ |
+| 8.2 | E-1a | `/api/data/backup` | POST | バックアップ実行 | P-009 | ✅ |
+| 8.3 | E-1a | `/api/data/backups` | GET | バックアップ一覧 | P-009 | ✅ |
+| 8.4 | E-1a | `/api/data/restore/{id}` | POST | リストア実行 | P-009 | ✅ |
 
 ### ⚡ Phase B-1: 組織管理API群（A-1b依存）
 | 番号 | Phase | エンドポイント | HTTPメソッド | 説明 | 対応ページ | 実装 | 依存 |
