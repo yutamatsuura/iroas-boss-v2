@@ -30,9 +30,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, desc
 
 from ..models.member import Member
-from ..models.reward_result import RewardResult
-from ..models.payment_record import PaymentRecord
-from ..models.activity_log import ActivityLog
+from ..models.reward import RewardHistory
+from ..models.payment import PaymentHistory
+from ..models.activity import ActivityLog
 from ..core.exceptions import (
     BusinessRuleError,
     DataNotFoundError,
@@ -431,20 +431,20 @@ class PaymentManagementService:
 
     # プライベートメソッド群
 
-    def _get_latest_reward_results(self, target_month: str) -> List[RewardResult]:
+    def _get_latest_reward_results(self, target_month: str) -> List[RewardHistory]:
         """対象月の最新報酬計算結果を取得"""
-        return self.db.query(RewardResult).filter(
-            func.date_format(RewardResult.calculation_date, '%Y-%m') == target_month
-        ).order_by(desc(RewardResult.calculation_date)).all()
+        return self.db.query(RewardHistory).filter(
+            func.date_format(RewardHistory.created_at, '%Y-%m') == target_month
+        ).order_by(desc(RewardHistory.created_at)).all()
 
-    def _get_member_reward_result(self, member_id: str, target_month: str) -> Optional[RewardResult]:
+    def _get_member_reward_result(self, member_id: str, target_month: str) -> Optional[RewardHistory]:
         """特定会員の報酬計算結果を取得"""
-        return self.db.query(RewardResult).filter(
+        return self.db.query(RewardHistory).filter(
             and_(
-                RewardResult.member_id == member_id,
-                func.date_format(RewardResult.calculation_date, '%Y-%m') == target_month
+                RewardHistory.member_id == member_id,
+                func.date_format(RewardHistory.created_at, '%Y-%m') == target_month
             )
-        ).order_by(desc(RewardResult.calculation_date)).first()
+        ).order_by(desc(RewardHistory.created_at)).first()
 
     def _get_carryover_amount(self, member_id: str, target_month: str) -> Decimal:
         """前月繰越金額を取得"""
