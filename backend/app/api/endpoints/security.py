@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User, UserSession, UserAccessLog
-from app.core.security import get_current_user
+from app.api.deps import get_current_user
 from app.services.security_service import security_service
 from app.services.audit_service import mlm_audit_service, AuditEvent, AuditEventType
 from app.services.notification_service import security_notification_service
@@ -148,9 +148,9 @@ async def get_security_recommendations(
 
 @router.get("/sessions", summary="アクティブセッション一覧")
 async def get_active_sessions(
+    request: Request,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    request: Request
+    db: Session = Depends(get_db)
 ):
     """アクティブセッション一覧取得"""
     sessions = db.query(UserSession).filter(
@@ -245,10 +245,10 @@ async def get_security_alerts(
 
 @router.post("/sessions/revoke", summary="セッション削除")
 async def revoke_sessions(
+    request: Request,
     request_data: SessionRevokeRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    request: Request
+    db: Session = Depends(get_db)
 ):
     """指定セッション削除"""
     
@@ -289,9 +289,9 @@ async def revoke_sessions(
 
 @router.post("/sessions/revoke-all-others", summary="他全セッション削除")
 async def revoke_all_other_sessions(
+    request: Request,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    request: Request
+    db: Session = Depends(get_db)
 ):
     """現在のセッション以外を全削除"""
     
@@ -432,10 +432,10 @@ async def initiate_mfa_setup(
 
 @router.post("/mfa/enable", summary="MFA有効化")
 async def enable_mfa(
+    request: Request,
     code: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    request: Request
+    db: Session = Depends(get_db)
 ):
     """MFA有効化"""
     
@@ -461,11 +461,11 @@ async def enable_mfa(
 
 @router.post("/mfa/disable", summary="MFA無効化")
 async def disable_mfa(
+    request: Request,
     password: str,
     code: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    request: Request
+    db: Session = Depends(get_db)
 ):
     """MFA無効化"""
     

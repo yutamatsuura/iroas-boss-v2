@@ -20,58 +20,51 @@ from app.database import Base
 
 class MemberStatus(str, Enum):
     """会員ステータス"""
-    ACTIVE = "アクティブ"
-    INACTIVE = "休会中"
-    WITHDRAWN = "退会済"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    WITHDRAWN = "WITHDRAWN"
 
 
 class Title(str, Enum):
     """称号（MLMタイトル体系）"""
-    NONE = "称号なし"
-    KNIGHT_DAME = "ナイト/デイム"
-    LORD_LADY = "ロード/レディ"
-    KING_QUEEN = "キング/クイーン"
-    EMPEROR_EMPRESS = "エンペラー/エンブレス"
-    START = "スタート"
-    LEADER = "リーダー"
-    SUB_MANAGER = "サブマネージャー"
-    MANAGER = "マネージャー"
-    EXPERT_MANAGER = "エキスパートマネージャー"
-    DIRECTOR = "ディレクター"
-    AREA_DIRECTOR = "エリアディレクター"
+    NONE = "NONE"
+    KNIGHT_DAME = "KNIGHT_DAME"
+    LORD_LADY = "LORD_LADY"
+    KING_QUEEN = "KING_QUEEN"
+    EMPEROR_EMPRESS = "EMPEROR_EMPRESS"
 
 
 class UserType(str, Enum):
     """ユーザータイプ"""
-    NORMAL = "通常"
-    ATTENTION = "注意"
+    NORMAL = "NORMAL"
+    ATTENTION = "ATTENTION"
 
 
 class Plan(str, Enum):
     """加入プラン"""
-    HERO = "ヒーロープラン"
-    TEST = "テストプラン"
+    HERO = "HERO"
+    TEST = "TEST"
 
 
 class PaymentMethod(str, Enum):
     """決済方法（4種類）"""
-    CARD = "カード決済"
-    TRANSFER = "口座振替"
-    BANK = "銀行振込"
-    INFOCART = "インフォカート"
+    CARD = "CARD"
+    TRANSFER = "TRANSFER"
+    BANK = "BANK"
+    INFOCART = "INFOCART"
 
 
 class Gender(str, Enum):
     """性別"""
-    MALE = "男性"
-    FEMALE = "女性"
-    OTHER = "その他"
+    MALE = "MALE"
+    FEMALE = "FEMALE"
+    OTHER = "OTHER"
 
 
 class AccountType(str, Enum):
     """口座種別"""
-    ORDINARY = "普通"
-    CHECKING = "当座"
+    ORDINARY = "ORDINARY"
+    CHECKING = "CHECKING"
 
 
 class Member(Base):
@@ -84,9 +77,9 @@ class Member(Base):
     # 基本情報（1-5）
     id = Column(Integer, primary_key=True, index=True)
     status = Column(SQLEnum(MemberStatus), nullable=False, default=MemberStatus.ACTIVE, comment="1.ステータス")
-    member_number = Column(String(7), unique=True, nullable=False, index=True, comment="2.IROAS会員番号（7桁）")
+    member_number = Column(String(11), unique=True, nullable=False, index=True, comment="2.IROAS会員番号（11桁）")
     name = Column(String(100), nullable=False, comment="3.氏名")
-    kana = Column(String(100), nullable=False, comment="4.カナ")
+    kana = Column(String(100), nullable=True, comment="4.カナ（廃止予定）")
     email = Column(String(255), nullable=False, unique=True, index=True, comment="5.メールアドレス")
     
     # MLM情報（6-9）
@@ -96,8 +89,8 @@ class Member(Base):
     payment_method = Column(SQLEnum(PaymentMethod), nullable=False, comment="9.決済方法")
     
     # 日付情報（10-11）
-    registration_date = Column(DateTime, nullable=False, default=datetime.utcnow, comment="10.登録日")
-    withdrawal_date = Column(DateTime, nullable=True, comment="11.退会日")
+    registration_date = Column(String(50), nullable=True, comment="10.登録日（任意形式）")
+    withdrawal_date = Column(String(50), nullable=True, comment="11.退会日（任意形式）")
     
     # 連絡先情報（12-17）
     phone = Column(String(20), nullable=True, comment="12.電話番号")
@@ -108,9 +101,9 @@ class Member(Base):
     address3 = Column(String(200), nullable=True, comment="17.住所3")
     
     # 組織情報（18-21）
-    upline_id = Column(String(7), ForeignKey("members.member_number"), nullable=True, comment="18.直上者ID")
+    upline_id = Column(String(11), nullable=True, comment="18.直上者ID")
     upline_name = Column(String(100), nullable=True, comment="19.直上者名")
-    referrer_id = Column(String(7), ForeignKey("members.member_number"), nullable=True, comment="20.紹介者ID") 
+    referrer_id = Column(String(11), nullable=True, comment="20.紹介者ID") 
     referrer_name = Column(String(100), nullable=True, comment="21.紹介者名")
     
     # 銀行情報（22-29）
@@ -131,9 +124,9 @@ class Member(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_deleted = Column(Boolean, default=False, comment="論理削除フラグ")
     
-    # リレーション
-    upline = relationship("Member", remote_side=[member_number], foreign_keys=[upline_id], backref="downlines")
-    referrer = relationship("Member", remote_side=[member_number], foreign_keys=[referrer_id], backref="referrals")
+    # リレーション（外部キー制約を削除し、アプリケーションレベルで管理）
+    # upline = relationship("Member", remote_side=[member_number], foreign_keys=[upline_id], backref="downlines")
+    # referrer = relationship("Member", remote_side=[member_number], foreign_keys=[referrer_id], backref="referrals")
     
     # 決済履歴
     payment_histories = relationship("PaymentHistory", back_populates="member", cascade="all, delete-orphan")
@@ -154,9 +147,14 @@ class Member(Base):
         """プラン料金"""
         return 10670 if self.plan == Plan.HERO else 9800
     
-    def get_display_name(self) -> str:
+    @property
+    def display_name(self) -> str:
         """表示用氏名（会員番号付き）"""
         return f"{self.member_number} - {self.name}"
+    
+    def get_display_name(self) -> str:
+        """表示用氏名（会員番号付き）- 後方互換性のため"""
+        return self.display_name
     
     def can_withdraw(self) -> bool:
         """退会可能かどうか"""
@@ -165,7 +163,8 @@ class Member(Base):
     def set_withdrawn(self) -> None:
         """退会処理"""
         self.status = MemberStatus.WITHDRAWN
-        self.withdrawal_date = datetime.utcnow()
+        from datetime import datetime
+        self.withdrawal_date = datetime.now().strftime("%Y-%m-%d")
     
     def get_bank_info_dict(self) -> dict:
         """GMOネットバンク用の銀行情報を辞書で返す"""

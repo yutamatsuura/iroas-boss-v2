@@ -60,7 +60,7 @@ class OrganizationNode(Base):
     
     # リレーション
     member = relationship("Member")
-    parent = relationship("OrganizationNode", remote_side=[id], backref="children")
+    parent = relationship("OrganizationNode", remote_side=[id], foreign_keys=[parent_id], backref="children")
     sponsor = relationship("OrganizationNode", remote_side=[id], foreign_keys=[sponsor_id])
     
     def __repr__(self) -> str:

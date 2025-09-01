@@ -17,58 +17,51 @@ from app.models.member import MemberStatus, Title, UserType, Plan, PaymentMethod
 
 class MemberStatusEnum(str, Enum):
     """会員ステータス（APIスキーマ用）"""
-    ACTIVE = "アクティブ"
-    INACTIVE = "休会中"
-    WITHDRAWN = "退会済"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    WITHDRAWN = "WITHDRAWN"
 
 
 class TitleEnum(str, Enum):
     """称号（APIスキーマ用）"""
-    NONE = "称号なし"
-    KNIGHT_DAME = "ナイト/デイム"
-    LORD_LADY = "ロード/レディ"
-    KING_QUEEN = "キング/クイーン"
-    EMPEROR_EMPRESS = "エンペラー/エンブレス"
-    START = "スタート"
-    LEADER = "リーダー"
-    SUB_MANAGER = "サブマネージャー"
-    MANAGER = "マネージャー"
-    EXPERT_MANAGER = "エキスパートマネージャー"
-    DIRECTOR = "ディレクター"
-    AREA_DIRECTOR = "エリアディレクター"
+    NONE = "NONE"
+    KNIGHT_DAME = "KNIGHT_DAME"
+    LORD_LADY = "LORD_LADY"
+    KING_QUEEN = "KING_QUEEN"
+    EMPEROR_EMPRESS = "EMPEROR_EMPRESS"
 
 
 class UserTypeEnum(str, Enum):
     """ユーザータイプ"""
-    NORMAL = "通常"
-    ATTENTION = "注意"
+    NORMAL = "NORMAL"
+    ATTENTION = "ATTENTION"
 
 
 class PlanEnum(str, Enum):
     """加入プラン"""
-    HERO = "ヒーロープラン"
-    TEST = "テストプラン"
+    HERO = "HERO"
+    TEST = "TEST"
 
 
 class PaymentMethodEnum(str, Enum):
     """決済方法"""
-    CARD = "カード決済"
-    TRANSFER = "口座振替"
-    BANK = "銀行振込"
-    INFOCART = "インフォカート"
+    CARD = "CARD"
+    TRANSFER = "TRANSFER"
+    BANK = "BANK"
+    INFOCART = "INFOCART"
 
 
 class GenderEnum(str, Enum):
     """性別"""
-    MALE = "男性"
-    FEMALE = "女性"
-    OTHER = "その他"
+    MALE = "MALE"
+    FEMALE = "FEMALE"
+    OTHER = "OTHER"
 
 
 class AccountTypeEnum(str, Enum):
     """口座種別"""
-    ORDINARY = "普通"
-    CHECKING = "当座"
+    ORDINARY = "ORDINARY"
+    CHECKING = "CHECKING"
 
 
 class MemberBase(BaseModel):
@@ -78,9 +71,9 @@ class MemberBase(BaseModel):
     """
     # 基本情報（1-5）
     status: MemberStatusEnum = Field(default=MemberStatusEnum.ACTIVE, description="1.ステータス")
-    member_number: str = Field(..., min_length=7, max_length=7, pattern=r'^\d{7}$', description="2.IROAS会員番号（7桁数字）")
+    member_number: str = Field(..., min_length=11, max_length=11, pattern=r'^\d{11}$', description="2.IROAS会員番号（11桁数字）")
     name: str = Field(..., min_length=1, max_length=100, description="3.氏名")
-    kana: str = Field(..., min_length=1, max_length=100, description="4.カナ")
+    kana: Optional[str] = Field(default=None, max_length=100, description="4.カナ（廃止予定）")
     email: EmailStr = Field(..., description="5.メールアドレス")
     
     # MLM情報（6-9）
@@ -90,8 +83,8 @@ class MemberBase(BaseModel):
     payment_method: PaymentMethodEnum = Field(..., description="9.決済方法")
     
     # 日付情報（10-11）
-    registration_date: Optional[datetime] = Field(default=None, description="10.登録日")
-    withdrawal_date: Optional[datetime] = Field(default=None, description="11.退会日")
+    registration_date: Optional[str] = Field(default=None, description="10.登録日（任意形式の文字列）")
+    withdrawal_date: Optional[str] = Field(default=None, description="11.退会日（任意形式の文字列）")
     
     # 連絡先情報（12-17）
     phone: Optional[str] = Field(default=None, max_length=20, description="12.電話番号")
@@ -102,16 +95,16 @@ class MemberBase(BaseModel):
     address3: Optional[str] = Field(default=None, max_length=200, description="17.住所3")
     
     # 組織情報（18-21）
-    upline_id: Optional[str] = Field(default=None, max_length=7, pattern=r'^\d{7}$', description="18.直上者ID")
+    upline_id: Optional[str] = Field(default=None, max_length=11, pattern=r'^\d{11}$', description="18.直上者ID")
     upline_name: Optional[str] = Field(default=None, max_length=100, description="19.直上者名")
-    referrer_id: Optional[str] = Field(default=None, max_length=7, pattern=r'^\d{7}$', description="20.紹介者ID")
+    referrer_id: Optional[str] = Field(default=None, max_length=11, pattern=r'^\d{11}$', description="20.紹介者ID")
     referrer_name: Optional[str] = Field(default=None, max_length=100, description="21.紹介者名")
     
     # 銀行情報（22-29）
     bank_name: Optional[str] = Field(default=None, max_length=100, description="22.報酬振込先の銀行名")
-    bank_code: Optional[str] = Field(default=None, max_length=4, pattern=r'^\d{4}$', description="23.報酬振込先の銀行コード")
+    bank_code: Optional[str] = Field(default=None, max_length=4, description="23.報酬振込先の銀行コード")
     branch_name: Optional[str] = Field(default=None, max_length=100, description="24.報酬振込先の支店名")
-    branch_code: Optional[str] = Field(default=None, max_length=3, pattern=r'^\d{3}$', description="25.報酬振込先の支店コード")
+    branch_code: Optional[str] = Field(default=None, max_length=3, description="25.報酬振込先の支店コード")
     account_number: Optional[str] = Field(default=None, max_length=10, pattern=r'^\d+$', description="26.口座番号")
     yucho_symbol: Optional[str] = Field(default=None, max_length=5, pattern=r'^\d{5}$', description="27.ゆうちょの場合の記号")
     yucho_number: Optional[str] = Field(default=None, max_length=8, pattern=r'^\d{1,8}$', description="28.ゆうちょの場合の番号")
@@ -146,7 +139,9 @@ class MemberUpdate(BaseModel):
     plan: Optional[PlanEnum] = Field(default=None, description="8.加入プラン")
     payment_method: Optional[PaymentMethodEnum] = Field(default=None, description="9.決済方法")
     
-    # 日付情報（registration_dateは更新不可、withdrawal_dateは退会処理で自動設定）
+    # 日付情報
+    registration_date: Optional[str] = Field(default=None, description="10.登録日（任意形式の文字列）")
+    withdrawal_date: Optional[str] = Field(default=None, description="11.退会日（任意形式の文字列）")
     
     # 連絡先情報
     phone: Optional[str] = Field(default=None, max_length=20, description="12.電話番号")
@@ -157,14 +152,14 @@ class MemberUpdate(BaseModel):
     address3: Optional[str] = Field(default=None, max_length=200, description="17.住所3")
     
     # 組織情報（upline系は別APIで更新）
-    referrer_id: Optional[str] = Field(default=None, max_length=7, pattern=r'^\d{7}$', description="20.紹介者ID")
+    referrer_id: Optional[str] = Field(default=None, max_length=11, pattern=r'^\d{11}$', description="20.紹介者ID")
     referrer_name: Optional[str] = Field(default=None, max_length=100, description="21.紹介者名")
     
     # 銀行情報
     bank_name: Optional[str] = Field(default=None, max_length=100, description="22.報酬振込先の銀行名")
-    bank_code: Optional[str] = Field(default=None, max_length=4, pattern=r'^\d{4}$', description="23.報酬振込先の銀行コード")
+    bank_code: Optional[str] = Field(default=None, max_length=4, description="23.報酬振込先の銀行コード")
     branch_name: Optional[str] = Field(default=None, max_length=100, description="24.報酬振込先の支店名")
-    branch_code: Optional[str] = Field(default=None, max_length=3, pattern=r'^\d{3}$', description="25.報酬振込先の支店コード")
+    branch_code: Optional[str] = Field(default=None, max_length=3, description="25.報酬振込先の支店コード")
     account_number: Optional[str] = Field(default=None, max_length=10, pattern=r'^\d+$', description="26.口座番号")
     yucho_symbol: Optional[str] = Field(default=None, max_length=5, pattern=r'^\d{5}$', description="27.ゆうちょの場合の記号")
     yucho_number: Optional[str] = Field(default=None, max_length=8, pattern=r'^\d{1,8}$', description="28.ゆうちょの場合の番号")
@@ -203,9 +198,10 @@ class MemberListItem(BaseModel):
     email: str = Field(description="メールアドレス")
     status: MemberStatusEnum = Field(description="ステータス")
     title: TitleEnum = Field(description="称号")
+    user_type: UserTypeEnum = Field(description="ユーザータイプ")
     plan: PlanEnum = Field(description="加入プラン")
     payment_method: PaymentMethodEnum = Field(description="決済方法")
-    registration_date: datetime = Field(description="登録日")
+    registration_date: Optional[str] = Field(description="登録日")
     upline_name: Optional[str] = Field(description="直上者名")
     
     # 計算プロパティ
@@ -235,7 +231,7 @@ class MemberSearch(BaseModel):
     """
     # 検索条件
     keyword: Optional[str] = Field(default=None, description="キーワード（会員番号、氏名、メールアドレス）")
-    member_number: Optional[str] = Field(default=None, max_length=7, description="会員番号")
+    member_number: Optional[str] = Field(default=None, max_length=11, description="会員番号")
     name: Optional[str] = Field(default=None, max_length=100, description="氏名（部分一致）")
     email: Optional[str] = Field(default=None, description="メールアドレス（部分一致）")
     
@@ -263,13 +259,13 @@ class SponsorChangeRequest(BaseModel):
     スポンサー変更リクエストスキーマ
     API 1.7: PUT /api/members/{id}/sponsor
     """
-    new_sponsor_id: str = Field(..., max_length=7, pattern=r'^\d{7}$', description="新しいスポンサーの会員番号")
+    new_sponsor_id: str = Field(..., max_length=11, pattern=r'^\d{11}$', description="新しいスポンサーの会員番号")
     reason: Optional[str] = Field(default=None, max_length=500, description="変更理由")
     
     @validator('new_sponsor_id')
     def validate_sponsor_id(cls, v):
-        if len(v) != 7 or not v.isdigit():
-            raise ValueError('スポンサーIDは7桁の数字である必要があります')
+        if len(v) != 11 or not v.isdigit():
+            raise ValueError('スポンサーIDは11桁の数字である必要があります')
         return v
 
 

@@ -175,7 +175,7 @@ class SponsorChangeRequest(BaseModel):
     API 1.7: PUT /api/members/{id}/sponsor
     組織手動調整機能
     """
-    new_sponsor_member_number: str = Field(..., pattern=r'^\d{7}$', description="新しいスポンサーの会員番号")
+    new_sponsor_member_number: str = Field(..., pattern=r'^\d{11}$', description="新しいスポンサーの会員番号")
     change_reason: str = Field(..., min_length=1, max_length=500, description="変更理由（必須）")
     
     # 変更オプション
@@ -188,8 +188,8 @@ class SponsorChangeRequest(BaseModel):
     
     @validator('new_sponsor_member_number')
     def validate_sponsor_member_number(cls, v):
-        if len(v) != 7 or not v.isdigit():
-            raise ValueError('スポンサー会員番号は7桁の数字である必要があります')
+        if len(v) != 11 or not v.isdigit():
+            raise ValueError('スポンサー会員番号は11桁の数字である必要があります')
         return v
     
     @validator('effective_date')
@@ -237,7 +237,7 @@ class OrganizationSearchRequest(BaseModel):
     """
     # 検索条件
     keyword: Optional[str] = Field(default=None, description="キーワード（会員番号、氏名）")
-    member_number: Optional[str] = Field(default=None, pattern=r'^\d{7}$', description="会員番号")
+    member_number: Optional[str] = Field(default=None, pattern=r'^\d{11}$', description="会員番号")
     name: Optional[str] = Field(default=None, description="氏名（部分一致）")
     
     # フィルター条件
