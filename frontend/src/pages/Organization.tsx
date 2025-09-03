@@ -83,8 +83,8 @@ const Organization: React.FC = () => {
   const fetchOrganizationData = async () => {
     setLoading(true);
     try {
-      // 組織ツリーデータを取得
-      const treeData = await OrganizationService.getOrganizationTree();
+      // 組織ツリーデータを取得（10階層まで表示）
+      const treeData = await OrganizationService.getOrganizationTree(undefined, 10);
       setOrganizationData(treeData.root_nodes);
       
       // 組織統計データを取得
@@ -357,7 +357,7 @@ const Organization: React.FC = () => {
 
       {/* 組織統計 */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6}>
           <Card>
             <CardContent>
               <Typography variant="body2" color="text.secondary">
@@ -372,7 +372,7 @@ const Organization: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6}>
           <Card>
             <CardContent>
               <Typography variant="body2" color="text.secondary">
@@ -380,30 +380,6 @@ const Organization: React.FC = () => {
               </Typography>
               <Typography variant="h4" fontWeight="bold">
                 {organizationStats?.max_level || 0}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="body2" color="text.secondary">
-                総売上
-              </Typography>
-              <Typography variant="h4" fontWeight="bold">
-                ¥{organizationStats ? (organizationStats.total_sales / 1000000).toFixed(1) : 0}M
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="body2" color="text.secondary">
-                平均階層深度
-              </Typography>
-              <Typography variant="h4" fontWeight="bold">
-                {organizationStats?.average_level?.toFixed(1) || 0}
               </Typography>
             </CardContent>
           </Card>

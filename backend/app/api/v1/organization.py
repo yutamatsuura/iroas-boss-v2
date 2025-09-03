@@ -202,9 +202,9 @@ def get_organization_tree(
 ):
     """組織ツリー取得（段階的表示）"""
     try:
-        # 初期表示は軽量化：最大3階層のみ
-        if max_level is None or max_level > 10:
-            max_level = 3  # デフォルト3階層で高速表示
+        # 初期表示は軽量化：最大10階層まで表示
+        if max_level is None or max_level > 20:
+            max_level = 10  # デフォルト10階層で表示
         
         # 制限付きでCSVデータを読み込み
         limited_org_data = []
@@ -223,13 +223,13 @@ def get_organization_tree(
                     member_number_raw = member_number_raw.strip() if member_number_raw else ''
                     
                     # 会員番号を11桁に整形（先頭ゼロ埋め）
-                    if member_number_raw and member_number_raw != '0':
+                    if member_number_raw:
                         try:
                             member_number = str(int(member_number_raw)).zfill(11)
                         except (ValueError, TypeError):
                             member_number = str(member_number_raw).zfill(11)
                     else:
-                        member_number = member_number_raw
+                        member_number = '00000000000'  # デフォルト11桁ゼロ
                     
                     original_name = row.get(' 会員氏名', '') or row.get('会員氏名', '')
                     original_name = original_name.strip() if original_name else ''
@@ -264,7 +264,7 @@ def get_organization_tree(
                     limited_org_data.append(org_node)
                 
                 count += 1
-                if count > 500:  # 最大500行まで（初期表示）
+                if count > 2000:  # 最大2000行まで（拡張表示）
                     break
         
         # 軽量ツリー構造構築（簡易版：レベル順階層）
@@ -300,18 +300,23 @@ def get_organization_tree(
             if item['level'] == 0:
                 root_nodes.append(node)
         
-        # 簡易親子関係構築（レベルベース）
+        # より適切な親子関係構築（階層パスベース）
         for item in limited_org_data:
-            current_level = item['level']
-            current_node = node_map[item['id']]
-            
-            # より高いレベルの親ノードを見つける
-            for parent_item in limited_org_data:
-                if (parent_item['level'] == current_level - 1 and
-                    current_level > 0):
-                    parent_node = node_map[parent_item['id']]
+            if item['level'] > 0:
+                current_node = node_map[item['id']]
+                
+                # 組織階層パスから親を特定
+                # 例: "┣ 1 LEFT" -> レベル1, "┃┣ 2 LEFT" -> レベル2
+                # 直前のレベルで最も近い親ノードを探す
+                best_parent = None
+                for parent_item in limited_org_data:
+                    if parent_item['level'] == item['level'] - 1:
+                        # 最も近い親候補として採用
+                        best_parent = parent_item
+                
+                if best_parent and best_parent['id'] in node_map:
+                    parent_node = node_map[best_parent['id']]
                     parent_node.children.append(current_node)
-                    break
         
         # 軽量統計計算
         total_members = len(limited_org_data)
@@ -574,13 +579,13 @@ def get_organization_member_detail(
                 member_number_raw = row.get(' 会員番号', '') or row.get('会員番号', '')
                 member_number_raw = member_number_raw.strip() if member_number_raw else ''
                 
-                if member_number_raw and member_number_raw != '0':
+                if member_number_raw:
                     try:
                         csv_member_number = str(int(member_number_raw)).zfill(11)
                     except (ValueError, TypeError):
                         csv_member_number = str(member_number_raw).zfill(11)
                 else:
-                    continue
+                    csv_member_number = '00000000000'  # デフォルト11桁ゼロ
                 
                 # 会員番号が一致する場合、詳細データを構築
                 if csv_member_number == normalized_member_number:
