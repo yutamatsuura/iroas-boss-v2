@@ -208,60 +208,89 @@ def get_organization_tree(
         
         # 制限付きでCSVデータを読み込み
         limited_org_data = []
+        focus_member_level = None
+        
+        # まず特定メンバーのレベルを取得（フォーカス時）
+        if member_id:
+            normalized_member_id = member_id.zfill(11)
+            with open(CSV_BINARY_PATH, 'r', encoding='utf-8') as file:
+                csv_reader = csv.DictReader(file)
+                for row in csv_reader:
+                    member_number_raw = row.get(' 会員番号', '') or row.get('会員番号', '')
+                    if member_number_raw:
+                        try:
+                            csv_member_number = str(int(member_number_raw)).zfill(11)
+                            if csv_member_number == normalized_member_id:
+                                level_str = row.get('階層', '0') or '0'
+                                focus_member_level = int(level_str) if level_str.isdigit() else 0
+                                break
+                        except (ValueError, TypeError):
+                            continue
+        
         with open(CSV_BINARY_PATH, 'r', encoding='utf-8') as file:
             csv_reader = csv.DictReader(file)
             count = 0
             
             for row in csv_reader:
-                # 階層制限で早期終了 
+                # 階層制限の計算
                 level_str = row.get('階層', '0') or '0'
                 level = int(level_str) if level_str.isdigit() else 0
-                if level <= max_level:
-                    # 軽量データ構築（フィールド名スペース除去）
-                    # CSVヘッダーに空白があるため、トリム処理が必要
-                    member_number_raw = row.get(' 会員番号', '') or row.get('会員番号', '')
-                    member_number_raw = member_number_raw.strip() if member_number_raw else ''
-                    
-                    # 会員番号を11桁に整形（先頭ゼロ埋め）
-                    if member_number_raw:
-                        try:
-                            member_number = str(int(member_number_raw)).zfill(11)
-                        except (ValueError, TypeError):
-                            member_number = str(member_number_raw).zfill(11)
-                    else:
-                        member_number = '00000000000'  # デフォルト11桁ゼロ
-                    
-                    original_name = row.get(' 会員氏名', '') or row.get('会員氏名', '')
-                    original_name = original_name.strip() if original_name else ''
-                    
-                    withdrawn_flag = row.get(' 退', '') or row.get('退', '')
-                    withdrawn_flag = withdrawn_flag.strip() if withdrawn_flag else ''
-                    is_withdrawn = "(退)" in str(withdrawn_flag)
-                    
-                    display_name = f"（退会者）{original_name}" if is_withdrawn and original_name else original_name
-                    
-                    org_node = {
-                        'id': f"{level}-{member_number}",
-                        'member_number': member_number,
-                        'name': display_name,
-                        'title': (row.get(' 資格名', '') or row.get('資格名', '')).strip(),
-                        'level': level,
-                        'hierarchy_path': (row.get(' 組織階層', '') or row.get('組織階層', '')).strip(),
-                        'registration_date': (row.get(' 登録日', '') or row.get('登録日', '')).strip(),
-                        'is_direct': "(直)" in str(row.get(' 直', '') or row.get('直', '') or ''),
-                        'is_withdrawn': is_withdrawn,
-                        'left_count': 0,  # 軽量化のため省略
-                        'right_count': 0,  # 軽量化のため省略
-                        'left_sales': 0,   # 軽量化のため省略
-                        'right_sales': 0,  # 軽量化のため省略
-                        'new_purchase': 0,
-                        'repeat_purchase': 0,
-                        'additional_purchase': 0,
-                        'position': "UNKNOWN",
-                        'raw_hierarchy': level,
-                        'member_status': "WITHDRAWN" if is_withdrawn else "ACTIVE"
-                    }
-                    limited_org_data.append(org_node)
+                
+                # フォーカス時は相対レベルで制限
+                if focus_member_level is not None:
+                    relative_level = level - focus_member_level
+                    if relative_level > max_level:
+                        continue
+                else:
+                    # 通常表示時は絶対レベルで制限
+                    if level > max_level:
+                        continue
+                
+                # 軽量データ構築（フィールド名スペース除去）
+                # CSVヘッダーに空白があるため、トリム処理が必要
+                member_number_raw = row.get(' 会員番号', '') or row.get('会員番号', '')
+                member_number_raw = member_number_raw.strip() if member_number_raw else ''
+                
+                # 会員番号を11桁に整形（先頭ゼロ埋め）
+                if member_number_raw:
+                    try:
+                        member_number = str(int(member_number_raw)).zfill(11)
+                    except (ValueError, TypeError):
+                        member_number = str(member_number_raw).zfill(11)
+                else:
+                    member_number = '00000000000'  # デフォルト11桁ゼロ
+                
+                original_name = row.get(' 会員氏名', '') or row.get('会員氏名', '')
+                original_name = original_name.strip() if original_name else ''
+                
+                withdrawn_flag = row.get(' 退', '') or row.get('退', '')
+                withdrawn_flag = withdrawn_flag.strip() if withdrawn_flag else ''
+                is_withdrawn = "(退)" in str(withdrawn_flag)
+                
+                display_name = f"（退会者）{original_name}" if is_withdrawn and original_name else original_name
+                
+                org_node = {
+                    'id': f"{level}-{member_number}",
+                    'member_number': member_number,
+                    'name': display_name,
+                    'title': (row.get(' 資格名', '') or row.get('資格名', '')).strip(),
+                    'level': level,
+                    'hierarchy_path': (row.get(' 組織階層', '') or row.get('組織階層', '')).strip(),
+                    'registration_date': (row.get(' 登録日', '') or row.get('登録日', '')).strip(),
+                    'is_direct': "(直)" in str(row.get(' 直', '') or row.get('直', '') or ''),
+                    'is_withdrawn': is_withdrawn,
+                    'left_count': 0,  # 軽量化のため省略
+                    'right_count': 0,  # 軽量化のため省略
+                    'left_sales': 0,   # 軽量化のため省略
+                    'right_sales': 0,  # 軽量化のため省略
+                    'new_purchase': 0,
+                    'repeat_purchase': 0,
+                    'additional_purchase': 0,
+                    'position': "UNKNOWN",
+                    'raw_hierarchy': level,
+                    'member_status': "WITHDRAWN" if is_withdrawn else "ACTIVE"
+                }
+                limited_org_data.append(org_node)
                 
                 count += 1
                 if count > 2000:  # 最大2000行まで（拡張表示）
