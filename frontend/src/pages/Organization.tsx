@@ -34,7 +34,12 @@ import {
   Visibility,
   Download,
 } from '@mui/icons-material';
-import { MemberService, Member, MemberStatus } from '@/services/memberService';
+import { 
+  OrganizationService, 
+  OrganizationNode, 
+  OrganizationTree, 
+  OrganizationStats 
+} from '@/services/organizationService';
 
 /**
  * P-003: 組織図ビューア
@@ -42,8 +47,8 @@ import { MemberService, Member, MemberStatus } from '@/services/memberService';
  * 要件定義書: 手動での組織調整（自動圧縮NG）
  */
 
-// 組織ツリーノードインターフェース
-interface OrganizationNode {
+// フロントエンド用組織ノード（レガシー互換性のため）
+interface LegacyOrganizationNode {
   id: number;
   memberNumber: string;
   name: string;
@@ -51,14 +56,15 @@ interface OrganizationNode {
   level: number;
   totalSales?: number;
   personalSales?: number;
-  children: OrganizationNode[];
+  children: LegacyOrganizationNode[];
   isExpanded?: boolean;
-  status: MemberStatus;
+  status: string;
 }
 
 const Organization: React.FC = () => {
   // State管理
   const [organizationData, setOrganizationData] = useState<OrganizationNode[]>([]);
+  const [organizationStats, setOrganizationStats] = useState<OrganizationStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedMember, setSelectedMember] = useState<OrganizationNode | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,59 +73,6 @@ const Organization: React.FC = () => {
   const [breadcrumbs, setBreadcrumbs] = useState<OrganizationNode[]>([]);
   const [viewMode, setViewMode] = useState<'tree' | 'table'>('tree');
 
-  // 模擬組織データ
-  const mockOrganizationData: OrganizationNode[] = [
-    {
-      id: 1,
-      memberNumber: '0000001',
-      name: '山田太郎',
-      title: 'エリアディレクター',
-      level: 1,
-      totalSales: 5000000,
-      personalSales: 500000,
-      status: MemberStatus.ACTIVE,
-      isExpanded: true,
-      children: [
-        {
-          id: 2,
-          memberNumber: '0000002',
-          name: '佐藤花子',
-          title: 'ディレクター',
-          level: 2,
-          totalSales: 2500000,
-          personalSales: 300000,
-          status: MemberStatus.ACTIVE,
-          isExpanded: false,
-          children: [
-            {
-              id: 3,
-              memberNumber: '0000003',
-              name: '田中次郎',
-              title: 'マネージャー',
-              level: 3,
-              totalSales: 800000,
-              personalSales: 200000,
-              status: MemberStatus.ACTIVE,
-              isExpanded: false,
-              children: [],
-            },
-          ],
-        },
-        {
-          id: 4,
-          memberNumber: '0000004',
-          name: '鈴木三郎',
-          title: 'マネージャー',
-          level: 2,
-          totalSales: 1200000,
-          personalSales: 250000,
-          status: MemberStatus.INACTIVE,
-          isExpanded: false,
-          children: [],
-        },
-      ],
-    },
-  ];
 
   useEffect(() => {
     fetchOrganizationData();
@@ -129,9 +82,13 @@ const Organization: React.FC = () => {
   const fetchOrganizationData = async () => {
     setLoading(true);
     try {
-      // 実際のAPI呼び出し（現在はモック）
-      await new Promise(resolve => setTimeout(resolve, 500)); // 模擬ローディング
-      setOrganizationData(mockOrganizationData);
+      // 組織ツリーデータを取得
+      const treeData = await OrganizationService.getOrganizationTree();
+      setOrganizationData(treeData.root_nodes);
+      
+      // 組織統計データを取得
+      const stats = await OrganizationService.getOrganizationStats();
+      setOrganizationStats(stats);
     } catch (error) {
       console.error('組織データ取得エラー:', error);
     } finally {
@@ -140,19 +97,9 @@ const Organization: React.FC = () => {
   };
 
   // ノード展開/折りたたみ
-  const toggleNodeExpansion = (nodeId: number) => {
-    const toggleNode = (nodes: OrganizationNode[]): OrganizationNode[] => {
-      return nodes.map(node => {
-        if (node.id === nodeId) {
-          return { ...node, isExpanded: !node.isExpanded };
-        }
-        if (node.children.length > 0) {
-          return { ...node, children: toggleNode(node.children) };
-        }
-        return node;
-      });
-    };
-    setOrganizationData(toggleNode(organizationData));
+  const toggleNodeExpansion = (nodeId: string) => {
+    const updatedData = OrganizationService.toggleNodeExpansion(organizationData, nodeId);
+    setOrganizationData(updatedData);
   };
 
   // メンバー詳細表示
@@ -173,26 +120,8 @@ const Organization: React.FC = () => {
     node: OrganizationNode; 
     depth: number;
   }> = ({ node, depth }) => {
-    const getStatusColor = (status: MemberStatus) => {
-      switch (status) {
-        case MemberStatus.ACTIVE:
-          return 'success';
-        case MemberStatus.INACTIVE:
-          return 'warning';
-        case MemberStatus.WITHDRAWN:
-          return 'error';
-        default:
-          return 'default';
-      }
-    };
-
-    const getTitleColor = (title: string) => {
-      if (title.includes('エリアディレクター')) return '#8b5cf6';
-      if (title.includes('ディレクター')) return '#3b82f6';
-      if (title.includes('マネージャー')) return '#10b981';
-      if (title.includes('リーダー')) return '#f59e0b';
-      return '#6b7280';
-    };
+    const getStatusColor = OrganizationService.getStatusColor;
+    const getTitleColor = OrganizationService.getTitleColor;
 
     return (
       <Box key={node.id}>
@@ -203,8 +132,11 @@ const Organization: React.FC = () => {
             border: selectedMember?.id === node.id ? 2 : 1,
             borderColor: selectedMember?.id === node.id ? 'primary.main' : 'divider',
             cursor: 'pointer',
+            opacity: node.is_withdrawn ? 0.6 : 1,
+            backgroundColor: node.is_withdrawn ? '#f5f5f5' : 'inherit',
+            borderStyle: node.is_withdrawn ? 'dashed' : 'solid',
             '&:hover': {
-              boxShadow: 2,
+              boxShadow: node.is_withdrawn ? 1 : 2,
             },
           }}
           onClick={() => handleMemberDetail(node)}
@@ -220,7 +152,7 @@ const Organization: React.FC = () => {
                     toggleNodeExpansion(node.id);
                   }}
                 >
-                  {node.isExpanded ? <ExpandLess /> : <ExpandMore />}
+                  {node.is_expanded ? <ExpandLess /> : <ExpandMore />}
                 </IconButton>
               )}
 
@@ -233,7 +165,7 @@ const Organization: React.FC = () => {
                     {node.name}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    ({node.memberNumber})
+                    ({node.member_number})
                   </Typography>
                   <Chip
                     label={node.status}
@@ -255,10 +187,16 @@ const Organization: React.FC = () => {
                   <Typography variant="caption" color="text.secondary">
                     レベル {node.level}
                   </Typography>
-                  {node.totalSales && (
+                  {(node.left_sales + node.right_sales > 0) && (
                     <Typography variant="caption" color="text.secondary">
-                      売上: ¥{node.totalSales.toLocaleString()}
+                      売上: ¥{(node.left_sales + node.right_sales).toLocaleString()}
                     </Typography>
+                  )}
+                  {node.is_direct && (
+                    <Chip label="直" size="small" color="primary" variant="outlined" />
+                  )}
+                  {node.is_withdrawn && (
+                    <Chip label="退" size="small" color="error" variant="outlined" />
                   )}
                 </Box>
               </Box>
@@ -284,7 +222,7 @@ const Organization: React.FC = () => {
                     handleSponsorChange(node);
                   }}
                   title="スポンサー変更"
-                  disabled={node.status === MemberStatus.WITHDRAWN}
+                  disabled={node.is_withdrawn}
                 >
                   <SwapHoriz fontSize="small" />
                 </IconButton>
@@ -294,7 +232,7 @@ const Organization: React.FC = () => {
         </Card>
 
         {/* 子ノード表示 */}
-        {node.isExpanded && node.children.map(child => (
+        {node.is_expanded && node.children.map(child => (
           <OrganizationTreeNode
             key={child.id}
             node={child}
@@ -326,7 +264,7 @@ const Organization: React.FC = () => {
             </Link>
             {breadcrumbs.map((crumb, index) => (
               <Typography key={crumb.id} color="text.primary">
-                {crumb.name} ({crumb.memberNumber})
+                {crumb.name} ({crumb.member_number})
               </Typography>
             ))}
           </Breadcrumbs>
@@ -379,7 +317,7 @@ const Organization: React.FC = () => {
               <Button
                 variant="outlined"
                 startIcon={<Download />}
-                onClick={() => console.log('組織図CSV出力')}
+                onClick={() => OrganizationService.downloadCsv('binary')}
               >
                 CSV出力
               </Button>
@@ -397,10 +335,13 @@ const Organization: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="body2" color="text.secondary">
-                総メンバー数
+                アクティブメンバー
               </Typography>
-              <Typography variant="h4" fontWeight="bold">
-                50
+              <Typography variant="h4" fontWeight="bold" color="success.main">
+                {organizationStats?.active_members || 0}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                退会者: {organizationStats?.withdrawn_members || 0}名
               </Typography>
             </CardContent>
           </Card>
@@ -412,7 +353,7 @@ const Organization: React.FC = () => {
                 最大階層
               </Typography>
               <Typography variant="h4" fontWeight="bold">
-                5
+                {organizationStats?.max_level || 0}
               </Typography>
             </CardContent>
           </Card>
@@ -424,7 +365,7 @@ const Organization: React.FC = () => {
                 総売上
               </Typography>
               <Typography variant="h4" fontWeight="bold">
-                ¥12.5M
+                ¥{organizationStats ? (organizationStats.total_sales / 1000000).toFixed(1) : 0}M
               </Typography>
             </CardContent>
           </Card>
@@ -436,7 +377,7 @@ const Organization: React.FC = () => {
                 平均階層深度
               </Typography>
               <Typography variant="h4" fontWeight="bold">
-                3.2
+                {organizationStats?.average_level?.toFixed(1) || 0}
               </Typography>
             </CardContent>
           </Card>

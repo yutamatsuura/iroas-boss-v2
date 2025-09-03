@@ -3,7 +3,7 @@ from .base import BaseResponse, PaginationMeta, ErrorResponse
 from .member import MemberCreate, MemberUpdate, MemberResponse, MemberList, MemberSearch
 from .payment import PaymentTargetResponse, PaymentExportRequest, PaymentImportRequest, PaymentHistoryResponse, ManualPaymentRequest
 from .reward import RewardCalculationRequest, RewardCalculationResponse, RewardHistoryResponse, RewardPrerequisiteResponse
-from .organization import OrganizationTreeResponse, OrganizationNodeResponse, SponsorChangeRequest
+from .organization import OrganizationNode, OrganizationTree, OrganizationStats
 from .activity import ActivityLogResponse, ActivityLogSearch
 from .setting import SystemSettingResponse, BusinessRuleResponse
 from .data import DataImportRequest, BackupResponse, RestoreRequest
@@ -35,9 +35,9 @@ __all__ = [
     "RewardPrerequisiteResponse",
     
     # Organization schemas
-    "OrganizationTreeResponse",
-    "OrganizationNodeResponse",
-    "SponsorChangeRequest",
+    "OrganizationNode",
+    "OrganizationTree",
+    "OrganizationStats",
     
     # Activity schemas
     "ActivityLogResponse",

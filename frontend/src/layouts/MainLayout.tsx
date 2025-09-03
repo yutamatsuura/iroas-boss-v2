@@ -46,18 +46,24 @@ const iconMap: { [key: string]: React.ElementType } = {
 };
 
 const drawerWidth = 260;
+const collapsedDrawerWidth = 60;
 
 /**
  * メインレイアウトコンポーネント
- * エンタープライズテーマのサイドバー + ヘッダーレイアウト
+ * エンタープライズテーマのサイドバー + ヘッダーレイアウト（開閉式対応）
  */
 const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopOpen, setDesktopOpen] = useState(true);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+
+  const handleDesktopDrawerToggle = () => {
+    setDesktopOpen(!desktopOpen);
   };
 
   const handleNavigate = (path: string) => {
@@ -65,8 +71,8 @@ const MainLayout: React.FC = () => {
     setMobileOpen(false);
   };
 
-  // ドロワーコンテンツ
-  const drawerContent = (
+  // ドロワーコンテンツ（開閉対応）
+  const drawerContent = (isCollapsed: boolean = false) => (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* ロゴ部分 */}
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -85,14 +91,16 @@ const MainLayout: React.FC = () => {
             IB
           </Typography>
         </Box>
-        <Box>
-          <Typography variant="h6" fontWeight="bold" color="text.primary">
-            IROAS BOSS
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            V2 Management System
-          </Typography>
-        </Box>
+        {!isCollapsed && (
+          <Box>
+            <Typography variant="h6" fontWeight="bold" color="text.primary">
+              IROAS BOSS
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              V2 Management System
+            </Typography>
+          </Box>
+        )}
       </Box>
       
       <Divider />
@@ -105,26 +113,32 @@ const MainLayout: React.FC = () => {
                           (item.path !== '/' && location.pathname.startsWith(item.path));
           
           return (
-            <Tooltip key={item.id} title={item.description || ''} placement="right" arrow>
+            <Tooltip key={item.id} title={isCollapsed ? item.title : (item.description || '')} placement="right" arrow>
               <ListItemButton
                 onClick={() => handleNavigate(item.path)}
                 selected={isActive}
                 sx={{
                   borderRadius: 1.5,
                   mb: 0.5,
+                  justifyContent: isCollapsed ? 'center' : 'flex-start',
                   ...(isActive && {
-                    bgcolor: 'primary.main',
-                    color: 'white',
+                    bgcolor: '#e3f2fd',
+                    color: '#1565c0',
+                    border: '1px solid #1976d2',
                     '&:hover': {
-                      bgcolor: 'primary.dark',
+                      bgcolor: '#bbdefb',
                     },
                     '& .MuiListItemIcon-root': {
-                      color: 'white',
+                      color: '#1565c0',
+                    },
+                    '& .MuiListItemText-primary': {
+                      color: '#1565c0 !important',
+                      fontWeight: '600 !important',
                     },
                   }),
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 40 }}>
+                <ListItemIcon sx={{ minWidth: isCollapsed ? 'unset' : 40, justifyContent: 'center' }}>
                   {item.badge ? (
                     <Badge badgeContent={item.badge} color="error">
                       <Icon fontSize="small" />
@@ -133,13 +147,16 @@ const MainLayout: React.FC = () => {
                     <Icon fontSize="small" />
                   )}
                 </ListItemIcon>
-                <ListItemText 
-                  primary={item.title}
-                  primaryTypographyProps={{
-                    fontSize: '0.875rem',
-                    fontWeight: isActive ? 600 : 400,
-                  }}
-                />
+                {!isCollapsed && (
+                  <ListItemText 
+                    primary={item.title}
+                    primaryTypographyProps={{
+                      fontSize: '0.875rem',
+                      fontWeight: isActive ? 600 : 400,
+                      color: isActive ? 'primary.dark' : 'inherit',
+                    }}
+                  />
+                )}
               </ListItemButton>
             </Tooltip>
           );
@@ -149,15 +166,17 @@ const MainLayout: React.FC = () => {
       <Divider />
       
       {/* バージョン情報 */}
-      <Box sx={{ p: 2, textAlign: 'center' }}>
-        <Typography variant="caption" color="text.secondary">
-          Version 1.0.0
-        </Typography>
-        <br />
-        <Typography variant="caption" color="text.secondary">
-          © 2025 IROAS
-        </Typography>
-      </Box>
+      {!isCollapsed && (
+        <Box sx={{ p: 2, textAlign: 'center' }}>
+          <Typography variant="caption" color="text.secondary">
+            Version 1.0.0
+          </Typography>
+          <br />
+          <Typography variant="caption" color="text.secondary">
+            © 2025 IROAS
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 
@@ -167,20 +186,37 @@ const MainLayout: React.FC = () => {
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
+          width: { 
+            sm: `calc(100% - ${desktopOpen ? drawerWidth : collapsedDrawerWidth}px)` 
+          },
+          ml: { 
+            sm: `${desktopOpen ? drawerWidth : collapsedDrawerWidth}px` 
+          },
           bgcolor: 'background.paper',
           color: 'text.primary',
           boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+          transition: 'margin-left 0.3s, width 0.3s',
         }}
       >
         <Toolbar>
+          {/* モバイル用メニューボタン */}
           <IconButton
             color="inherit"
             aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
             sx={{ mr: 2, display: { sm: 'none' } }}
+          >
+            <MenuIcon />
+          </IconButton>
+          
+          {/* デスクトップ用メニューボタン */}
+          <IconButton
+            color="inherit"
+            aria-label="toggle drawer"
+            edge="start"
+            onClick={handleDesktopDrawerToggle}
+            sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}
           >
             <MenuIcon />
           </IconButton>
@@ -210,7 +246,11 @@ const MainLayout: React.FC = () => {
       {/* サイドバー */}
       <Box
         component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+        sx={{ 
+          width: { sm: desktopOpen ? drawerWidth : collapsedDrawerWidth }, 
+          flexShrink: { sm: 0 },
+          transition: 'width 0.3s',
+        }}
       >
         {/* モバイル用ドロワー */}
         <Drawer
@@ -229,7 +269,7 @@ const MainLayout: React.FC = () => {
             },
           }}
         >
-          {drawerContent}
+          {drawerContent(false)}
         </Drawer>
         
         {/* デスクトップ用ドロワー */}
@@ -239,15 +279,17 @@ const MainLayout: React.FC = () => {
             display: { xs: 'none', sm: 'block' },
             '& .MuiDrawer-paper': { 
               boxSizing: 'border-box', 
-              width: drawerWidth,
+              width: desktopOpen ? drawerWidth : collapsedDrawerWidth,
               bgcolor: 'background.paper',
               borderRight: '1px solid',
               borderColor: 'divider',
+              transition: 'width 0.3s',
+              overflowX: 'hidden',
             },
           }}
           open
         >
-          {drawerContent}
+          {drawerContent(!desktopOpen)}
         </Drawer>
       </Box>
       
@@ -257,10 +299,13 @@ const MainLayout: React.FC = () => {
         sx={{
           flexGrow: 1,
           p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          width: { 
+            sm: `calc(100% - ${desktopOpen ? drawerWidth : collapsedDrawerWidth}px)` 
+          },
           minHeight: '100vh',
           bgcolor: 'background.default',
           mt: 8, // AppBarの高さ分
+          transition: 'width 0.3s',
         }}
       >
         <Outlet />

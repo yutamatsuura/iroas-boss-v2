@@ -332,6 +332,17 @@ export class DataManagementService {
   }
 
   /**
+   * 会員データテンプレートダウンロード
+   */
+  static async downloadMemberTemplate(): Promise<Blob> {
+    const response = await fetch('/api/v1/members/template/download');
+    if (!response.ok) {
+      throw new Error(`Template download failed: ${response.statusText}`);
+    }
+    return response.blob();
+  }
+
+  /**
    * データ移行ジョブ作成
    */
   static async createMigrationJob(job: Omit<MigrationJob, 'id' | 'status' | 'progress' | 'startedAt' | 'migratedRecords' | 'errors' | 'logs'>): Promise<{ jobId: string }> {

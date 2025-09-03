@@ -1,422 +1,470 @@
 """
-会員管理APIエンドポイント
+会員管理APIエンドポイント（完全データ対応版）
 """
-import csv
-import io
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
-from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
-from sqlalchemy import or_
-from app.database import get_db
-from app.models import Member, MemberStatus
-from app.schemas.member import (
-    MemberCreate, 
-    MemberUpdate, 
-    MemberResponse, 
-    MemberList,
-    MemberListItem
-)
+import sqlite3
+from fastapi import APIRouter, Query, HTTPException
+from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime
 
 router = APIRouter(prefix="/members", tags=["members"])
 
-@router.get("/", response_model=MemberList)
-async def get_members(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
-    search: Optional[str] = None,
-    memberNumber: Optional[str] = None,
-    name: Optional[str] = None,
-    email: Optional[str] = None,
-    status: Optional[MemberStatus] = None,
-    plan: Optional[str] = None,
-    paymentMethod: Optional[str] = None,
-    db: Session = Depends(get_db)
+# 会員更新用のPydanticモデル
+class MemberUpdate(BaseModel):
+    # snake_case (DB形式)
+    name: Optional[str] = None
+    kana: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    gender: Optional[str] = None
+    status: Optional[str] = None
+    title: Optional[str] = None
+    user_type: Optional[str] = None
+    plan: Optional[str] = None
+    payment_method: Optional[str] = None
+    postal_code: Optional[str] = None
+    prefecture: Optional[str] = None
+    address2: Optional[str] = None
+    address3: Optional[str] = None
+    upline_id: Optional[str] = None
+    upline_name: Optional[str] = None
+    referrer_id: Optional[str] = None
+    referrer_name: Optional[str] = None
+    bank_name: Optional[str] = None
+    bank_code: Optional[str] = None
+    branch_name: Optional[str] = None
+    branch_code: Optional[str] = None
+    account_number: Optional[str] = None
+    yucho_symbol: Optional[str] = None
+    yucho_number: Optional[str] = None
+    account_type: Optional[str] = None
+    registration_date: Optional[str] = None
+    withdrawal_date: Optional[str] = None
+    notes: Optional[str] = None
+    
+    # camelCase (フロントエンド形式) - 互換性のため
+    userType: Optional[str] = None
+    paymentMethod: Optional[str] = None
+    postalCode: Optional[str] = None
+    uplineId: Optional[str] = None
+    uplineName: Optional[str] = None
+    referrerId: Optional[str] = None
+    referrerName: Optional[str] = None
+    bankName: Optional[str] = None
+    bankCode: Optional[str] = None
+    branchName: Optional[str] = None
+    branchCode: Optional[str] = None
+    accountNumber: Optional[str] = None
+    yuchoSymbol: Optional[str] = None
+    yuchoNumber: Optional[str] = None
+    accountType: Optional[str] = None
+    registrationDate: Optional[str] = None
+    withdrawalDate: Optional[str] = None
+
+@router.get("/")
+def get_members(
+    page: int = Query(1, ge=1),
+    perPage: int = Query(20, ge=1, le=100),
+    memberNumber: str = Query("", description="会員番号で検索"),
+    name: str = Query("", description="名前で検索"),
+    email: str = Query("", description="メールアドレスで検索"),
+    sortBy: str = Query("memberNumber", description="ソート項目"),
+    sortOrder: str = Query("asc", description="ソート順")
 ):
-    """会員一覧取得"""
-    query = db.query(Member).filter(Member.is_deleted == False)
-    
-    # 検索条件（個別フィールド）
-    if memberNumber:
-        query = query.filter(Member.member_number.contains(memberNumber))
-    if name:
-        query = query.filter(Member.name.contains(name))
-    if email:
-        query = query.filter(Member.email.contains(email))
-    
-    # 汎用検索（後方互換性のため残す）
-    if search:
-        search_filter = or_(
-            Member.member_number.contains(search),
-            Member.name.contains(search),
-            Member.email.contains(search)
-        )
-        query = query.filter(search_filter)
-    
-    if status:
-        query = query.filter(Member.status == status)
-    
-    if plan:
-        query = query.filter(Member.plan == plan)
-    
-    if paymentMethod:
-        query = query.filter(Member.payment_method == paymentMethod)
-    
-    # 総件数取得
-    total = query.count()
-    
-    # ステータス別カウント取得
-    active_count = db.query(Member).filter(Member.status == MemberStatus.ACTIVE, Member.is_deleted == False).count()
-    inactive_count = db.query(Member).filter(Member.status == MemberStatus.INACTIVE, Member.is_deleted == False).count()
-    withdrawn_count = db.query(Member).filter(Member.status == MemberStatus.WITHDRAWN, Member.is_deleted == False).count()
-    
-    # ページネーション
-    members = query.offset(skip).limit(limit).all()
-    
-    return {
-        "members": members,
-        "total_count": total,
-        "active_count": active_count,
-        "inactive_count": inactive_count,
-        "withdrawn_count": withdrawn_count
-    }
+    """会員一覧取得（検索対応版）"""
+    try:
+        db_path = "/Users/lennon/projects/iroas-boss-v2/backend/iroas_boss_v2.db"
+        conn = sqlite3.connect(db_path, timeout=5)
+        conn.row_factory = sqlite3.Row
+        
+        # 検索条件を構築
+        where_conditions = []
+        params = []
+        
+        if memberNumber.strip():
+            where_conditions.append("member_number LIKE ?")
+            params.append(f"%{memberNumber.strip()}%")
+        
+        if name.strip():
+            where_conditions.append("name LIKE ?")
+            params.append(f"%{name.strip()}%")
+        
+        if email.strip():
+            where_conditions.append("email LIKE ?")
+            params.append(f"%{email.strip()}%")
+        
+        where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        
+        # ソート項目のマッピング
+        sort_mapping = {
+            "memberNumber": "member_number",
+            "name": "name", 
+            "email": "email",
+            "status": "status",
+            "plan": "plan"
+        }
+        sort_column = sort_mapping.get(sortBy, "member_number")
+        sort_direction = "DESC" if sortOrder.lower() == "desc" else "ASC"
+        
+        # 総件数取得
+        count_query = f"SELECT COUNT(*) FROM members{where_clause}"
+        total = conn.execute(count_query, params).fetchone()[0]
+        
+        # ステータス別集計取得
+        status_query = f"SELECT status, COUNT(*) as count FROM members{where_clause} GROUP BY status"
+        status_counts = conn.execute(status_query, params).fetchall()
+        
+        # ステータス別カウントを計算
+        active_count = 0
+        inactive_count = 0 
+        withdrawn_count = 0
+        
+        for status_row in status_counts:
+            status = status_row["status"] or "ACTIVE"
+            count = status_row["count"]
+            if status == "ACTIVE":
+                active_count += count
+            elif status == "INACTIVE":
+                inactive_count += count
+            elif status == "WITHDRAWN":
+                withdrawn_count += count
+            else:
+                active_count += count  # デフォルトはACTIVE扱い
+        
+        # データ取得
+        offset = (page - 1) * perPage
+        query = f"SELECT * FROM members{where_clause} ORDER BY {sort_column} {sort_direction} LIMIT ? OFFSET ?"
+        rows = conn.execute(query, params + [perPage, offset]).fetchall()
+        
+        members = []
+        for row in rows:
+            member_data = {
+                # 基本情報
+                "id": row["id"],
+                "member_number": row["member_number"] or "",
+                "memberNumber": row["member_number"] or "",  # フロントエンド互換
+                "name": row["name"] or "",
+                "kana": row["kana"] or "",
+                "email": row["email"] or "",
+                "phone": row["phone"] or "",
+                "gender": row["gender"] or "",
+                
+                # ステータス関連
+                "status": row["status"] or "ACTIVE",
+                "title": row["title"] or "NONE",
+                "user_type": row["user_type"] or "NORMAL",
+                "userType": row["user_type"] or "NORMAL",  # フロントエンド互換
+                "plan": row["plan"] or "BASIC",
+                "payment_method": row["payment_method"] or "CARD",
+                "paymentMethod": row["payment_method"] or "CARD",  # フロントエンド互換
+                
+                # 住所情報
+                "postal_code": row["postal_code"] or "",
+                "postalCode": row["postal_code"] or "",  # フロントエンド互換
+                "prefecture": row["prefecture"] or "",
+                "address2": row["address2"] or "",
+                "address3": row["address3"] or "",
+                
+                # 組織関連
+                "upline_id": row["upline_id"] or "",
+                "uplineId": row["upline_id"] or "",  # フロントエンド互換
+                "upline_name": row["upline_name"] or "",
+                "uplineName": row["upline_name"] or "",  # フロントエンド互換
+                "referrer_id": row["referrer_id"] or "",
+                "referrerId": row["referrer_id"] or "",  # フロントエンド互換
+                "referrer_name": row["referrer_name"] or "",
+                "referrerName": row["referrer_name"] or "",  # フロントエンド互換
+                
+                # 口座情報
+                "bank_name": row["bank_name"] or "",
+                "bankName": row["bank_name"] or "",  # フロントエンド互換
+                "bank_code": row["bank_code"] or "",
+                "bankCode": row["bank_code"] or "",  # フロントエンド互換
+                "branch_name": row["branch_name"] or "",
+                "branchName": row["branch_name"] or "",  # フロントエンド互換
+                "branch_code": row["branch_code"] or "",
+                "branchCode": row["branch_code"] or "",  # フロントエンド互換
+                "account_number": row["account_number"] or "",
+                "accountNumber": row["account_number"] or "",  # フロントエンド互換
+                "yucho_symbol": row["yucho_symbol"] or "",
+                "yuchoSymbol": row["yucho_symbol"] or "",  # フロントエンド互換
+                "yucho_number": row["yucho_number"] or "",
+                "yuchoNumber": row["yucho_number"] or "",  # フロントエンド互換
+                "account_type": row["account_type"] or "",
+                "accountType": row["account_type"] or "",  # フロントエンド互換
+                
+                # 日付
+                "registration_date": row["registration_date"] or "",
+                "registrationDate": row["registration_date"] or "",  # フロントエンド互換
+                "withdrawal_date": row["withdrawal_date"] or "",
+                "withdrawalDate": row["withdrawal_date"] or "",  # フロントエンド互換
+                "created_at": row["created_at"] or "",
+                "createdAt": row["created_at"] or "",  # フロントエンド互換
+                "updated_at": row["updated_at"] or "",
+                "updatedAt": row["updated_at"] or "",  # フロントエンド互換
+                
+                # その他
+                "notes": row["notes"] or "",
+                "is_deleted": row["is_deleted"] or False,
+                "isDeleted": row["is_deleted"] or False,  # フロントエンド互換
+            }
+            members.append(member_data)
+        
+        conn.close()
+        
+        return {
+            "data": members,
+            "members": members,
+            "total": total,
+            "total_count": total,
+            "totalCount": total,
+            "active_count": active_count,
+            "activeCount": active_count,
+            "inactive_count": inactive_count,
+            "inactiveCount": inactive_count,
+            "withdrawn_count": withdrawn_count,
+            "withdrawnCount": withdrawn_count,
+            "page": page,
+            "perPage": perPage,
+            "totalPages": (total + perPage - 1) // perPage,
+            "source": "complete_database"
+        }
+        
+    except Exception as e:
+        return {
+            "error": str(e),
+            "data": [],
+            "members": [],
+            "total": 0,
+            "page": page,
+            "perPage": perPage
+        }
 
-@router.get("/export")
-async def export_members(
-    memberNumber: Optional[str] = None,
-    name: Optional[str] = None,
-    email: Optional[str] = None,
-    status: Optional[MemberStatus] = None,
-    db: Session = Depends(get_db)
-):
-    """会員データCSV出力"""
-    query = db.query(Member).filter(Member.is_deleted == False)
-    
-    # 検索条件適用
-    if memberNumber:
-        query = query.filter(Member.member_number.contains(memberNumber))
-    if name:
-        query = query.filter(Member.name.contains(name))
-    if email:
-        query = query.filter(Member.email.contains(email))
-    if status:
-        query = query.filter(Member.status == status)
-    
-    members = query.all()
-    
-    # CSV作成
-    output = io.StringIO()
-    writer = csv.writer(output)
-    
-    # ヘッダー行（カナを除く29項目）
-    writer.writerow([
-        'ステータス', '会員番号', '氏名', 'メールアドレス',
-        '称号', 'ユーザータイプ', '加入プラン', '決済方法',
-        '登録日', '退会日', '電話番号', '性別',
-        '郵便番号', '都道府県', '住所2', '住所3',
-        '直上者ID', '直上者名', '紹介者ID', '紹介者名',
-        '銀行名', '銀行コード', '支店名', '支店コード',
-        '口座番号', 'ゆうちょ記号', 'ゆうちょ番号', '口座種別', '備考'
-    ])
-    
-    # 表示用マッピング辞書
-    status_map = {'ACTIVE': 'アクティブ', 'INACTIVE': '休会中', 'WITHDRAWN': '退会済'}
-    title_map = {'NONE': '称号なし', 'KNIGHT_DAME': 'ナイト/デイム', 'LORD_LADY': 'ロード/レディ', 
-                 'KING_QUEEN': 'キング/クイーン', 'EMPEROR_EMPRESS': 'エンペラー/エンプレス'}
-    user_type_map = {'NORMAL': '通常', 'ATTENTION': '注意'}
-    plan_map = {'HERO': 'ヒーロープラン', 'TEST': 'テストプラン'}
-    payment_method_map = {'CARD': 'カード決済', 'TRANSFER': '口座振替', 'BANK': '銀行振込', 'INFOCART': 'インフォカート'}
-    gender_map = {'MALE': '男性', 'FEMALE': '女性', 'OTHER': 'その他'}
-    account_type_map = {'ORDINARY': '普通', 'CHECKING': '当座'}
-    
-    # データ行
-    for member in members:
-        writer.writerow([
-            status_map.get(member.status.value, '') if member.status else '',
-            member.member_number,
-            member.name,
-            member.email,
-            title_map.get(member.title.value, '') if member.title else '',
-            user_type_map.get(member.user_type.value, '') if member.user_type else '',
-            plan_map.get(member.plan.value, '') if member.plan else '',
-            payment_method_map.get(member.payment_method.value, '') if member.payment_method else '',
-            member.registration_date or '',
-            member.withdrawal_date or '',
-            member.phone or '',
-            gender_map.get(member.gender.value, '') if member.gender else '',
-            member.postal_code or '',
-            member.prefecture or '',
-            member.address2 or '',
-            member.address3 or '',
-            member.upline_id or '',
-            member.upline_name or '',
-            member.referrer_id or '',
-            member.referrer_name or '',
-            member.bank_name or '',
-            member.bank_code or '',
-            member.branch_name or '',
-            member.branch_code or '',
-            member.account_number or '',
-            member.yucho_symbol or '',
-            member.yucho_number or '',
-            account_type_map.get(member.account_type.value, '') if member.account_type else '',
-            member.notes or ''
-        ])
-    
-    output.seek(0)
-    
-    return StreamingResponse(
-        io.BytesIO(output.getvalue().encode('utf-8-sig')),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=members.csv"}
-    )
+@router.get("/{identifier}")
+def get_member(identifier: str):
+    """会員詳細取得（ID又は会員番号）"""
+    try:
+        db_path = "/Users/lennon/projects/iroas-boss-v2/backend/iroas_boss_v2.db"
+        conn = sqlite3.connect(db_path, timeout=5)
+        conn.row_factory = sqlite3.Row
+        
+        # 数字のみで短い場合(3桁以下)はIDとして検索、それ以外は会員番号として検索
+        if identifier.isdigit() and len(identifier) <= 3:
+            row = conn.execute("SELECT * FROM members WHERE id = ?", (int(identifier),)).fetchone()
+        else:
+            row = conn.execute("SELECT * FROM members WHERE member_number = ?", (identifier,)).fetchone()
+        
+        conn.close()
+        
+        if not row:
+            return {"error": "Member not found"}
+        
+        # 完全なデータを返す
+        return {
+            "id": row["id"],
+            "member_number": row["member_number"] or "",
+            "memberNumber": row["member_number"] or "",
+            "name": row["name"] or "",
+            "kana": row["kana"] or "",
+            "email": row["email"] or "",
+            "phone": row["phone"] or "",
+            "gender": row["gender"] or "",
+            "status": row["status"] or "ACTIVE",
+            "title": row["title"] or "NONE",
+            "user_type": row["user_type"] or "NORMAL",
+            "userType": row["user_type"] or "NORMAL",
+            "plan": row["plan"] or "BASIC",
+            "payment_method": row["payment_method"] or "CARD",
+            "paymentMethod": row["payment_method"] or "CARD",
+            "postal_code": row["postal_code"] or "",
+            "postalCode": row["postal_code"] or "",
+            "prefecture": row["prefecture"] or "",
+            "address2": row["address2"] or "",
+            "address3": row["address3"] or "",
+            "upline_id": row["upline_id"] or "",
+            "uplineId": row["upline_id"] or "",
+            "upline_name": row["upline_name"] or "",
+            "uplineName": row["upline_name"] or "",
+            "referrer_id": row["referrer_id"] or "",
+            "referrerId": row["referrer_id"] or "",
+            "referrer_name": row["referrer_name"] or "",
+            "referrerName": row["referrer_name"] or "",
+            "bank_name": row["bank_name"] or "",
+            "bankName": row["bank_name"] or "",
+            "bank_code": row["bank_code"] or "",
+            "bankCode": row["bank_code"] or "",
+            "branch_name": row["branch_name"] or "",
+            "branchName": row["branch_name"] or "",
+            "branch_code": row["branch_code"] or "",
+            "branchCode": row["branch_code"] or "",
+            "account_number": row["account_number"] or "",
+            "accountNumber": row["account_number"] or "",
+            "yucho_symbol": row["yucho_symbol"] or "",
+            "yuchoSymbol": row["yucho_symbol"] or "",
+            "yucho_number": row["yucho_number"] or "",
+            "yuchoNumber": row["yucho_number"] or "",
+            "account_type": row["account_type"] or "",
+            "accountType": row["account_type"] or "",
+            "registration_date": row["registration_date"] or "",
+            "registrationDate": row["registration_date"] or "",
+            "withdrawal_date": row["withdrawal_date"] or "",
+            "withdrawalDate": row["withdrawal_date"] or "",
+            "created_at": row["created_at"] or "",
+            "createdAt": row["created_at"] or "",
+            "updated_at": row["updated_at"] or "",
+            "updatedAt": row["updated_at"] or "",
+            "notes": row["notes"] or "",
+            "is_deleted": row["is_deleted"] or False,
+            "isDeleted": row["is_deleted"] or False
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
-@router.get("/{member_number}", response_model=MemberResponse)
-async def get_member(member_number: str, db: Session = Depends(get_db)):
-    """会員詳細取得"""
-    member = db.query(Member).filter(
-        Member.member_number == member_number,
-        Member.is_deleted == False
-    ).first()
-    
-    if not member:
-        raise HTTPException(status_code=404, detail="Member not found")
-    
-    return member
-
-@router.post("/", response_model=MemberResponse)
-async def create_member(member_data: MemberCreate, db: Session = Depends(get_db)):
-    """会員登録"""
-    print(f"Received data: {member_data.dict()}")  # デバッグログ
-    
-    # 重複チェック
-    existing = db.query(Member).filter(
-        or_(
-            Member.member_number == member_data.member_number,
-            Member.email == member_data.email
-        )
-    ).first()
-    
-    if existing:
-        print(f"Duplicate found: {existing.member_number} - {existing.email}")
-        raise HTTPException(
-            status_code=400, 
-            detail="Member number or email already exists"
-        )
-    
-    # 会員作成
-    member = Member(**member_data.dict())
-    db.add(member)
-    db.commit()
-    db.refresh(member)
-    
-    return member
-
-@router.put("/{member_number}", response_model=MemberResponse)
-async def update_member(
-    member_number: str,
-    member_data: MemberUpdate,
-    db: Session = Depends(get_db)
-):
-    """会員情報更新"""
-    member = db.query(Member).filter(
-        Member.member_number == member_number,
-        Member.is_deleted == False
-    ).first()
-    
-    if not member:
-        raise HTTPException(status_code=404, detail="Member not found")
-    
-    # 更新
-    update_data = member_data.dict(exclude_unset=True)
-    print(f"受信した更新データ: {update_data}")  # デバッグログ
-    for key, value in update_data.items():
-        setattr(member, key, value)
-        print(f"更新: {key} = {value}")  # デバッグログ
-    
-    db.commit()
-    db.refresh(member)
-    
-    return member
-
-@router.delete("/{member_number}")
-async def delete_member(member_number: str, db: Session = Depends(get_db)):
-    """会員削除（論理削除）"""
-    member = db.query(Member).filter(
-        Member.member_number == member_number,
-        Member.is_deleted == False
-    ).first()
-    
-    if not member:
-        raise HTTPException(status_code=404, detail="Member not found")
-    
-    # 論理削除
-    member.is_deleted = True
-    db.commit()
-    
-    return {"message": "Member deleted successfully"}
-
-@router.post("/{member_number}/withdraw")
-async def withdraw_member(member_number: str, db: Session = Depends(get_db)):
-    """会員退会処理"""
-    member = db.query(Member).filter(
-        Member.member_number == member_number,
-        Member.is_deleted == False
-    ).first()
-    
-    if not member:
-        raise HTTPException(status_code=404, detail="Member not found")
-    
-    if not member.can_withdraw():
-        raise HTTPException(status_code=400, detail="Member cannot withdraw")
-    
-    # 退会処理
-    member.set_withdrawn()
-    db.commit()
-    
-    return {"message": "Member withdrawn successfully"}
-
-@router.get("/template/download")
-async def download_member_template():
-    """会員データCSVテンプレートダウンロード"""
-    # CSVテンプレート作成
-    output = io.StringIO()
-    writer = csv.writer(output)
-    
-    # ヘッダー行（29項目）
-    writer.writerow([
-        'ステータス', '会員番号', '氏名', 'メールアドレス',
-        '称号', 'ユーザータイプ', '加入プラン', '決済方法',
-        '登録日', '退会日', '電話番号', '性別',
-        '郵便番号', '都道府県', '住所2', '住所3',
-        '直上者ID', '直上者名', '紹介者ID', '紹介者名',
-        '銀行名', '銀行コード', '支店名', '支店コード',
-        '口座番号', 'ゆうちょ記号', 'ゆうちょ番号', '口座種別', '備考'
-    ])
-    
-    # サンプルデータ行（記入例として3行）
-    writer.writerow([
-        'アクティブ', '10000000999', 'サンプル太郎', 'sample.taro@example.com',
-        'ナイト/デイム', '通常', 'ヒーロープラン', 'カード決済',
-        '2024-01-01', '', '090-0000-0000', '男性',
-        '100-0001', '東京都', '千代田区1-1-1', 'サンプルビル101',
-        '10000000001', '山田太郎', '10000000002', '佐藤花子',
-        '三菱UFJ銀行', '0005', '東京支店', '001',
-        '1234567', '', '', '普通', 'サンプルデータ'
-    ])
-    
-    writer.writerow([
-        'アクティブ', '10000000998', 'サンプル花子', 'sample.hanako@example.com',
-        'ロード/レディ', '注意', 'ヒーロープラン', '口座振替',
-        '2024-02-01', '', '080-0000-0000', '女性',
-        '164-0001', '東京都', '中野区5-6-7', 'サンプルマンション201',
-        '10000000002', '佐藤花子', '10000000003', '田中一郎',
-        'ゆうちょ銀行', '', '', '',
-        '', '18220', '87654321', '', 'ゆうちょ銀行利用例'
-    ])
-    
-    writer.writerow([
-        '休会中', '10000000997', 'サンプル次郎', 'sample.jiro@example.com',
-        'エンペラー/エンプレス', '通常', 'テストプラン', 'インフォカート',
-        '2023年12月1日', '', '070-0000-0000', 'その他',
-        '530-0001', '大阪府', '大阪市北区梅田2-2-2', 'サンプルタワー501',
-        '10000000003', '田中一郎', '10000000001', '山田太郎',
-        'みずほ銀行', '0001', '大阪支店', '101',
-        '9876543', '', '', '当座', '多様性サンプル'
-    ])
-    
-    output.seek(0)
-    
-    return StreamingResponse(
-        io.BytesIO(output.getvalue().encode('utf-8-sig')),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=member_import_template.csv"}
-    )
-
-@router.post("/import")
-async def import_members(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db)
-):
-    """会員データCSV取込"""
-    if not file.filename.endswith('.csv'):
-        raise HTTPException(status_code=400, detail="CSV file required")
-    
-    contents = await file.read()
-    decoded = contents.decode('utf-8-sig')
-    
-    reader = csv.DictReader(io.StringIO(decoded))
-    
-    imported_count = 0
-    errors = []
-    
-    for row_num, row in enumerate(reader, start=2):
-        try:
-            # 既存チェック
-            existing = db.query(Member).filter(
-                Member.member_number == row['会員番号']
-            ).first()
-            
-            if existing:
-                errors.append(f"行{row_num}: 会員番号 {row['会員番号']} は既に存在します")
-                continue
-            
-            # 空文字列をNoneに変換するヘルパー関数
-            def empty_to_none(value):
-                return None if value == '' else value
-            
-            # 日本語値を内部Enum値に変換
-            status_map = {'アクティブ': 'ACTIVE', '休会中': 'INACTIVE', '退会済': 'WITHDRAWN'}
-            title_map = {'称号なし': 'NONE', 'ナイト/デイム': 'KNIGHT_DAME', 'ロード/レディ': 'LORD_LADY', 
-                        'キング/クイーン': 'KING_QUEEN', 'エンペラー/エンプレス': 'EMPEROR_EMPRESS'}
-            user_type_map = {'通常': 'NORMAL', '注意': 'ATTENTION'}
-            plan_map = {'ヒーロープラン': 'HERO', 'テストプラン': 'TEST'}
-            payment_map = {'カード決済': 'CARD', '口座振替': 'TRANSFER', '銀行振込': 'BANK', 'インフォカート': 'INFOCART'}
-            gender_map = {'男性': 'MALE', '女性': 'FEMALE', 'その他': 'OTHER'}
-            account_map = {'普通': 'ORDINARY', '当座': 'CHECKING'}
-            
-            # 新規作成
-            member = Member(
-                status=status_map.get(row.get('ステータス', 'アクティブ'), 'ACTIVE'),
-                member_number=row['会員番号'],
-                name=row['氏名'],
-                email=row['メールアドレス'],
-                title=title_map.get(row.get('称号', '称号なし'), 'NONE'),
-                user_type=user_type_map.get(row.get('ユーザータイプ', '通常'), 'NORMAL'),
-                plan=plan_map.get(row.get('加入プラン', 'ヒーロープラン'), 'HERO'),
-                payment_method=payment_map.get(row.get('決済方法', 'カード決済'), 'CARD'),
-                registration_date=empty_to_none(row.get('登録日')),
-                withdrawal_date=empty_to_none(row.get('退会日')),
-                phone=empty_to_none(row.get('電話番号')),
-                gender=gender_map.get(row.get('性別')) if row.get('性別') else None,
-                postal_code=empty_to_none(row.get('郵便番号')),
-                prefecture=empty_to_none(row.get('都道府県')),
-                address2=empty_to_none(row.get('住所2')),
-                address3=empty_to_none(row.get('住所3')),
-                upline_id=empty_to_none(row.get('直上者ID')),
-                upline_name=empty_to_none(row.get('直上者名')),
-                referrer_id=empty_to_none(row.get('紹介者ID')),
-                referrer_name=empty_to_none(row.get('紹介者名')),
-                bank_name=empty_to_none(row.get('銀行名')),
-                bank_code=empty_to_none(row.get('銀行コード')),
-                branch_name=empty_to_none(row.get('支店名')),
-                branch_code=empty_to_none(row.get('支店コード')),
-                account_number=empty_to_none(row.get('口座番号')),
-                yucho_symbol=empty_to_none(row.get('ゆうちょ記号')),
-                yucho_number=empty_to_none(row.get('ゆうちょ番号')),
-                account_type=account_map.get(row.get('口座種別')) if row.get('口座種別') else None,
-                notes=empty_to_none(row.get('備考'))
-            )
-            
-            db.add(member)
-            imported_count += 1
-            
-        except Exception as e:
-            errors.append(f"行{row_num}: {str(e)}")
-    
-    db.commit()
-    
-    return {
-        "imported": imported_count,
-        "errors": errors
-    }
+@router.put("/{identifier}")
+def update_member(identifier: str, member_data: MemberUpdate):
+    """会員情報更新（ID又は会員番号）"""
+    try:
+        # フロントエンドから送信されたデータを全てログ出力
+        received_data = member_data.model_dump(exclude_unset=True)
+        print(f"=== PUT UPDATE DEBUG - Member {identifier} ===")
+        print(f"Received {len(received_data)} fields:")
+        for field, value in received_data.items():
+            print(f"  {field}: {repr(value)}")
+        print("=" * 50)
+        
+        db_path = "/Users/lennon/projects/iroas-boss-v2/backend/iroas_boss_v2.db"
+        conn = sqlite3.connect(db_path, timeout=5)
+        conn.row_factory = sqlite3.Row
+        
+        # 現在のデータを取得
+        if identifier.isdigit() and len(identifier) <= 3:
+            current_row = conn.execute("SELECT * FROM members WHERE id = ?", (int(identifier),)).fetchone()
+        else:
+            current_row = conn.execute("SELECT * FROM members WHERE member_number = ?", (identifier,)).fetchone()
+        
+        if not current_row:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Member not found")
+        
+        # 更新データの準備
+        update_fields = []
+        update_params = []
+        
+        # camelCase → snake_case マッピング
+        field_mapping = {
+            'userType': 'user_type',
+            'paymentMethod': 'payment_method', 
+            'postalCode': 'postal_code',
+            'uplineId': 'upline_id',
+            'uplineName': 'upline_name',
+            'referrerId': 'referrer_id',
+            'referrerName': 'referrer_name',
+            'bankName': 'bank_name',
+            'bankCode': 'bank_code',
+            'branchName': 'branch_name',
+            'branchCode': 'branch_code',
+            'accountNumber': 'account_number',
+            'yuchoSymbol': 'yucho_symbol',
+            'yuchoNumber': 'yucho_number',
+            'accountType': 'account_type',
+            'registrationDate': 'registration_date',
+            'withdrawalDate': 'withdrawal_date'
+        }
+        
+        # 送信されたフィールドのみ更新
+        for field, value in member_data.model_dump(exclude_unset=True).items():
+            if value is not None:
+                # camelCaseの場合はsnake_caseに変換
+                db_field = field_mapping.get(field, field)
+                update_fields.append(f"{db_field} = ?")
+                update_params.append(value)
+        
+        # updated_atを追加
+        update_fields.append("updated_at = ?")
+        update_params.append(datetime.now().isoformat())
+        
+        # WHERE条件の準備
+        if identifier.isdigit() and len(identifier) <= 3:
+            where_clause = "id = ?"
+            update_params.append(int(identifier))
+        else:
+            where_clause = "member_number = ?"
+            update_params.append(identifier)
+        
+        # 更新実行
+        if update_fields:
+            update_query = f"UPDATE members SET {', '.join(update_fields)} WHERE {where_clause}"
+            conn.execute(update_query, update_params)
+            conn.commit()
+        
+        # 更新後のデータを取得
+        if identifier.isdigit() and len(identifier) <= 3:
+            updated_row = conn.execute("SELECT * FROM members WHERE id = ?", (int(identifier),)).fetchone()
+        else:
+            updated_row = conn.execute("SELECT * FROM members WHERE member_number = ?", (identifier,)).fetchone()
+        
+        conn.close()
+        
+        # 更新されたデータを完全な形式で返す
+        return {
+            "id": updated_row["id"],
+            "member_number": updated_row["member_number"] or "",
+            "memberNumber": updated_row["member_number"] or "",
+            "name": updated_row["name"] or "",
+            "kana": updated_row["kana"] or "",
+            "email": updated_row["email"] or "",
+            "phone": updated_row["phone"] or "",
+            "gender": updated_row["gender"] or "",
+            "status": updated_row["status"] or "ACTIVE",
+            "title": updated_row["title"] or "NONE",
+            "user_type": updated_row["user_type"] or "NORMAL",
+            "userType": updated_row["user_type"] or "NORMAL",
+            "plan": updated_row["plan"] or "BASIC",
+            "payment_method": updated_row["payment_method"] or "CARD",
+            "paymentMethod": updated_row["payment_method"] or "CARD",
+            "postal_code": updated_row["postal_code"] or "",
+            "postalCode": updated_row["postal_code"] or "",
+            "prefecture": updated_row["prefecture"] or "",
+            "address2": updated_row["address2"] or "",
+            "address3": updated_row["address3"] or "",
+            "upline_id": updated_row["upline_id"] or "",
+            "uplineId": updated_row["upline_id"] or "",
+            "upline_name": updated_row["upline_name"] or "",
+            "uplineName": updated_row["upline_name"] or "",
+            "referrer_id": updated_row["referrer_id"] or "",
+            "referrerId": updated_row["referrer_id"] or "",
+            "referrer_name": updated_row["referrer_name"] or "",
+            "referrerName": updated_row["referrer_name"] or "",
+            "bank_name": updated_row["bank_name"] or "",
+            "bankName": updated_row["bank_name"] or "",
+            "bank_code": updated_row["bank_code"] or "",
+            "bankCode": updated_row["bank_code"] or "",
+            "branch_name": updated_row["branch_name"] or "",
+            "branchName": updated_row["branch_name"] or "",
+            "branch_code": updated_row["branch_code"] or "",
+            "branchCode": updated_row["branch_code"] or "",
+            "account_number": updated_row["account_number"] or "",
+            "accountNumber": updated_row["account_number"] or "",
+            "yucho_symbol": updated_row["yucho_symbol"] or "",
+            "yuchoSymbol": updated_row["yucho_symbol"] or "",
+            "yucho_number": updated_row["yucho_number"] or "",
+            "yuchoNumber": updated_row["yucho_number"] or "",
+            "account_type": updated_row["account_type"] or "",
+            "accountType": updated_row["account_type"] or "",
+            "registration_date": updated_row["registration_date"] or "",
+            "registrationDate": updated_row["registration_date"] or "",
+            "withdrawal_date": updated_row["withdrawal_date"] or "",
+            "withdrawalDate": updated_row["withdrawal_date"] or "",
+            "created_at": updated_row["created_at"] or "",
+            "createdAt": updated_row["created_at"] or "",
+            "updated_at": updated_row["updated_at"] or "",
+            "updatedAt": updated_row["updated_at"] or "",
+            "notes": updated_row["notes"] or "",
+            "is_deleted": updated_row["is_deleted"] or False,
+            "isDeleted": updated_row["is_deleted"] or False
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

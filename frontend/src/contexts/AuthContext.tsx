@@ -65,12 +65,28 @@ const REFRESH_TOKEN_KEY = 'iroas_boss_refresh_token';
  * Phase 21 MLM認証要件完全準拠
  */
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // 開発モード: 認証をスキップ
+  const isDevelopment = import.meta.env.VITE_SKIP_AUTH === 'true';
+  const mockUser: User | null = isDevelopment ? {
+    id: 1,
+    username: 'admin',
+    email: 'admin@example.com',
+    full_name: '管理者',
+    display_name: '管理者',
+    role: UserRole.SUPER_ADMIN,
+    is_active: true,
+    is_verified: true,
+    mfa_enabled: false,
+    permissions: ['*'],
+    created_at: new Date().toISOString(),
+  } : null;
+
   const [authState, setAuthState] = useState<AuthState>({
-    user: null,
-    isAuthenticated: false,
-    isLoading: true,
-    accessToken: localStorage.getItem(ACCESS_TOKEN_KEY),
-    refreshToken: localStorage.getItem(REFRESH_TOKEN_KEY),
+    user: mockUser,
+    isAuthenticated: isDevelopment,
+    isLoading: !isDevelopment,
+    accessToken: isDevelopment ? 'mock-token' : localStorage.getItem(ACCESS_TOKEN_KEY),
+    refreshToken: isDevelopment ? 'mock-refresh' : localStorage.getItem(REFRESH_TOKEN_KEY),
   });
 
   // トークンの有効性チェック
@@ -210,6 +226,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // 初期認証状態チェック
   useEffect(() => {
     const initializeAuth = async () => {
+      // 開発モードの場合はスキップ
+      if (isDevelopment) {
+        setAuthState(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+      
       const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
       const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
 
@@ -255,6 +277,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // トークンの自動リフレッシュ設定
   useEffect(() => {
+    if (isDevelopment) return; // 開発モードはスキップ
     if (!authState.accessToken || !authState.isAuthenticated) return;
 
     const setupTokenRefresh = () => {

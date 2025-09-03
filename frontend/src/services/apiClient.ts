@@ -6,7 +6,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
  */
 
 // APIベースURL設定（開発環境）
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
 
 // Axiosインスタンス作成
 const apiClient: AxiosInstance = axios.create({
@@ -20,10 +20,13 @@ const apiClient: AxiosInstance = axios.create({
 // リクエストインターセプター
 apiClient.interceptors.request.use(
   (config: AxiosRequestConfig) => {
-    // 認証トークンがある場合はヘッダーに追加（Phase 21認証統合）
-    const token = localStorage.getItem('iroas_boss_access_token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // 開発モードでは認証をスキップ
+    if (import.meta.env.VITE_SKIP_AUTH !== 'true') {
+      // 認証トークンがある場合はヘッダーに追加（Phase 21認証統合）
+      const token = localStorage.getItem('iroas_boss_access_token');
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     
     // デバッグ用ログ（開発環境のみ）

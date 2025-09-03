@@ -15,7 +15,7 @@ export interface SystemSettings {
   maintenanceMode: boolean;
   
   // 会員設定
-  memberNumberDigits: number; // 会員番号桁数（7桁）
+  memberNumberDigits: number; // 会員番号桁数（11桁）
   maxMembersPerPage: number;
   defaultMemberStatus: string;
   

@@ -1,203 +1,159 @@
 """
-組織データモデル
+組織図関連のデータモデル
 
-要件定義書の組織図要件に対応：
-- MLM組織をツリー形式で表示
-- 退会処理と組織圧縮（手動調整）
-- タイトル昇格の自動判定
-- 各種実績の追跡
-
-重要な仕様：
-- 退会処理は自動圧縮ではなく手動調整方式
-- 組織変更は手動でのスポンサー変更機能
+MLM組織構造の管理：
+- バイナリツリー構造（LEFT/RIGHT）
+- 退会者ポジション永続保持
+- 売上実績・報酬計算
 """
 
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
-from typing import Optional, List, Dict, Any
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, JSON, Text
-from sqlalchemy.orm import relationship
+from typing import Optional, List
+from sqlalchemy import (
+    Column, Integer, String, DateTime, Date, Text, 
+    ForeignKey, Enum as SQLEnum, DECIMAL, Boolean
+)
+from sqlalchemy.orm import relationship, backref
 from app.database import Base
 
 
-class OrganizationNode(Base):
+class PositionType(str, Enum):
+    """組織ポジションタイプ"""
+    ROOT = "ROOT"
+    LEFT = "LEFT" 
+    RIGHT = "RIGHT"
+
+
+class OrganizationPosition(Base):
     """
-    組織ノードテーブル
-    MLM組織構造の効率的な管理用
+    組織ポジションテーブル
+    すべての組織ポジション（アクティブメンバー・退会者）を管理
     """
-    __tablename__ = "organization_nodes"
+    __tablename__ = "organization_positions"
     
     id = Column(Integer, primary_key=True, index=True)
     
-    # 会員情報
-    member_id = Column(Integer, ForeignKey("members.id"), nullable=False, unique=True, comment="会員ID")
-    member_number = Column(String(7), nullable=False, unique=True, index=True, comment="会員番号")
+    # メンバー参照（アクティブメンバーの場合）
+    member_id = Column(Integer, ForeignKey("members.id"), nullable=True)
+    
+    # 退会者参照（退会者の場合）
+    withdrawn_id = Column(Integer, ForeignKey("withdrawals.id"), nullable=True)
     
     # 組織構造
-    parent_id = Column(Integer, ForeignKey("organization_nodes.id"), nullable=True, index=True, comment="親ノードID")
-    sponsor_id = Column(Integer, ForeignKey("organization_nodes.id"), nullable=True, index=True, comment="スポンサーノードID")
+    parent_id = Column(Integer, ForeignKey("organization_positions.id"), nullable=True)
+    position_type = Column(SQLEnum(PositionType), nullable=False)
+    level = Column(Integer, default=0)
+    hierarchy_path = Column(String(500), nullable=True)  # "1.2.1" 形式
     
-    # 階層情報
-    level = Column(Integer, nullable=False, default=0, comment="階層レベル（0=ルート）")
-    path = Column(String(1000), nullable=True, comment="階層パス（/1/2/3/形式）")
+    # 組織実績（アクティブメンバーのみカウント）
+    left_count = Column(Integer, default=0)      # 左組織のアクティブ人数
+    right_count = Column(Integer, default=0)     # 右組織のアクティブ人数
+    left_sales = Column(DECIMAL(12, 2), default=0)   # 左組織売上
+    right_sales = Column(DECIMAL(12, 2), default=0)  # 右組織売上
     
-    # 組織統計
-    direct_downline_count = Column(Integer, nullable=False, default=0, comment="直下会員数")
-    total_downline_count = Column(Integer, nullable=False, default=0, comment="配下総会員数")
-    active_downline_count = Column(Integer, nullable=False, default=0, comment="配下アクティブ会員数")
-    
-    # 実績情報
-    monthly_sales = Column(JSON, nullable=True, comment="月別売上実績（JSON）")
-    monthly_recruits = Column(JSON, nullable=True, comment="月別新規紹介実績（JSON）")
-    
-    # ステータス
-    is_active = Column(Boolean, nullable=False, default=True, comment="アクティブフラグ")
-    is_root = Column(Boolean, nullable=False, default=False, comment="ルートノードフラグ")
-    
-    # システム情報
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # タイムスタンプ
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # リレーション
-    member = relationship("Member")
-    parent = relationship("OrganizationNode", remote_side=[id], foreign_keys=[parent_id], backref="children")
-    sponsor = relationship("OrganizationNode", remote_side=[id], foreign_keys=[sponsor_id])
+    member = relationship("Member", backref="organization_position")
+    withdrawal = relationship("Withdrawal", backref="organization_position")
     
-    def __repr__(self) -> str:
-        return f"<OrganizationNode(member_number={self.member_number}, level={self.level})>"
+    # 自己参照リレーション
+    parent = relationship(
+        "OrganizationPosition",
+        remote_side=[id],
+        backref=backref("children", cascade="all, delete-orphan")
+    )
     
-    @property
-    def depth(self) -> int:
-        """組織の深さ"""
-        return len(self.path.split('/')) - 1 if self.path else 0
+    # 売上実績
+    sales_records = relationship(
+        "OrganizationSales", 
+        backref="position",
+        cascade="all, delete-orphan"
+    )
+
+
+class Withdrawal(Base):
+    """
+    退会者テーブル
+    退会した会員の情報（組織図表示用）
+    """
+    __tablename__ = "withdrawals"
     
-    @property
-    def has_downlines(self) -> bool:
-        """配下会員がいるかどうか"""
-        return self.direct_downline_count > 0
+    id = Column(Integer, primary_key=True, index=True)
     
-    def get_path_list(self) -> List[int]:
-        """パスをリスト形式で取得"""
-        if not self.path:
-            return []
-        return [int(x) for x in self.path.split('/') if x]
+    # 退会者識別
+    withdrawal_number = Column(String(20), unique=True, nullable=False)  # WITHDRAWN_001
     
-    def get_monthly_sales(self, year_month: str) -> int:
-        """指定月の売上を取得"""
-        if not self.monthly_sales:
-            return 0
-        return self.monthly_sales.get(year_month, 0)
+    # 元会員情報（記録用）
+    original_member_id = Column(Integer, ForeignKey("members.id"), nullable=True)
+    original_member_number = Column(String(11), nullable=True)
+    original_name = Column(Text, nullable=True)
     
-    def get_monthly_recruits(self, year_month: str) -> int:
-        """指定月の新規紹介数を取得"""
-        if not self.monthly_recruits:
-            return 0
-        return self.monthly_recruits.get(year_month, 0)
+    # 退会情報
+    withdrawal_date = Column(Date, nullable=False)
+    withdrawal_reason = Column(Text, nullable=True)
     
-    def update_path(self, parent_path: str = None) -> None:
-        """階層パスを更新"""
-        if self.is_root:
-            self.path = f"/{self.id}/"
-            self.level = 0
-        elif parent_path:
-            self.path = f"{parent_path}{self.id}/"
-            self.level = len(self.path.split('/')) - 2
-        else:
-            # 親から計算
-            if self.parent:
-                self.path = f"{self.parent.path}{self.id}/"
-                self.level = self.parent.level + 1
+    # タイムスタンプ
+    created_at = Column(DateTime, default=datetime.utcnow)
     
-    def update_downline_counts(self, direct_count: int, total_count: int, active_count: int) -> None:
-        """配下数統計を更新"""
-        self.direct_downline_count = direct_count
-        self.total_downline_count = total_count  
-        self.active_downline_count = active_count
-        self.updated_at = datetime.utcnow()
+    # リレーション
+    original_member = relationship("Member", backref="withdrawal_record")
+
+
+class OrganizationSales(Base):
+    """
+    組織売上実績テーブル
+    月次の売上実績を管理
+    """
+    __tablename__ = "organization_sales"
     
-    def add_monthly_sales(self, year_month: str, amount: int) -> None:
-        """月別売上を追加"""
-        if not self.monthly_sales:
-            self.monthly_sales = {}
-        
-        # 辞書を更新
-        monthly_sales = dict(self.monthly_sales)
-        monthly_sales[year_month] = monthly_sales.get(year_month, 0) + amount
-        self.monthly_sales = monthly_sales
+    id = Column(Integer, primary_key=True, index=True)
     
-    def add_monthly_recruit(self, year_month: str, count: int = 1) -> None:
-        """月別新規紹介を追加"""
-        if not self.monthly_recruits:
-            self.monthly_recruits = {}
-        
-        # 辞書を更新
-        monthly_recruits = dict(self.monthly_recruits)
-        monthly_recruits[year_month] = monthly_recruits.get(year_month, 0) + count
-        self.monthly_recruits = monthly_recruits
+    # ポジション参照
+    position_id = Column(Integer, ForeignKey("organization_positions.id"), nullable=False)
     
-    def change_sponsor(self, new_sponsor_id: int, new_parent_id: int = None) -> None:
-        """スポンサー変更（手動組織調整）"""
-        self.sponsor_id = new_sponsor_id
-        if new_parent_id:
-            self.parent_id = new_parent_id
-        self.updated_at = datetime.utcnow()
+    # 期間
+    year_month = Column(String(7), nullable=False)  # "2025-08" 形式
     
-    def set_withdrawn(self) -> None:
-        """退会処理（ノードを非アクティブに）"""
-        self.is_active = False
-        self.updated_at = datetime.utcnow()
+    # 売上実績
+    new_purchase = Column(DECIMAL(12, 2), default=0)      # 新規購入
+    repeat_purchase = Column(DECIMAL(12, 2), default=0)   # リピート購入  
+    additional_purchase = Column(DECIMAL(12, 2), default=0)  # 追加購入
     
-    def to_tree_dict(self, include_children: bool = False) -> Dict[str, Any]:
-        """ツリー表示用辞書に変換"""
-        result = {
-            "id": self.id,
-            "member_id": self.member_id,
-            "member_number": self.member_number,
-            "level": self.level,
-            "direct_downline_count": self.direct_downline_count,
-            "total_downline_count": self.total_downline_count,
-            "active_downline_count": self.active_downline_count,
-            "is_active": self.is_active,
-            "created_at": self.created_at.isoformat(),
-        }
-        
-        # 会員情報を含める（member relationshipから）
-        if hasattr(self, 'member') and self.member:
-            result.update({
-                "name": self.member.name,
-                "title": self.member.title,
-                "plan": self.member.plan,
-                "status": self.member.status,
-            })
-        
-        if include_children and hasattr(self, 'children'):
-            result["children"] = [child.to_tree_dict() for child in self.children]
-        
-        return result
+    # タイムスタンプ
+    created_at = Column(DateTime, default=datetime.utcnow)
     
-    @classmethod
-    def create_root_node(cls, member_id: int, member_number: str) -> 'OrganizationNode':
-        """ルートノード作成"""
-        node = cls(
-            member_id=member_id,
-            member_number=member_number,
-            parent_id=None,
-            sponsor_id=None,
-            level=0,
-            is_root=True,
-            is_active=True
-        )
-        # パスは保存後に更新される
-        return node
+    __table_args__ = (
+        # 同じポジション・月の重複を防ぐ
+        {'sqlite_autoincrement': True},
+    )
+
+
+class OrganizationStats(Base):
+    """
+    組織統計テーブル
+    組織全体の統計情報をキャッシュ
+    """
+    __tablename__ = "organization_stats"
     
-    @classmethod
-    def create_child_node(cls, member_id: int, member_number: str, 
-                         parent_id: int, sponsor_id: int = None) -> 'OrganizationNode':
-        """子ノード作成"""
-        return cls(
-            member_id=member_id,
-            member_number=member_number,
-            parent_id=parent_id,
-            sponsor_id=sponsor_id or parent_id,  # sponsor未指定なら親と同じ
-            is_active=True
-        )
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # 統計期間
+    stats_date = Column(Date, nullable=False)
+    
+    # メンバー統計
+    total_positions = Column(Integer, default=0)       # 全ポジション数
+    active_members = Column(Integer, default=0)        # アクティブメンバー数
+    withdrawn_members = Column(Integer, default=0)     # 退会者数
+    max_level = Column(Integer, default=0)             # 最大階層レベル
+    
+    # 売上統計
+    total_sales = Column(DECIMAL(12, 2), default=0)    # 総売上
+    monthly_sales = Column(DECIMAL(12, 2), default=0)  # 月次売上
+    
+    # タイムスタンプ
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

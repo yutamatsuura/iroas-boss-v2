@@ -291,6 +291,36 @@ const DataManagement: React.FC = () => {
     }
   };
 
+  // テンプレートダウンロード
+  const handleTemplateDownload = async (dataType: DataType) => {
+    try {
+      let blob: Blob;
+      let fileName: string;
+      
+      if (dataType === DataType.MEMBERS) {
+        blob = await DataManagementService.downloadMemberTemplate();
+        fileName = 'member_import_template.csv';
+      } else {
+        // 他のデータタイプは今後実装
+        console.log(`${dataType}のテンプレートダウンロードは未実装`);
+        return;
+      }
+
+      // ファイルダウンロード
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('テンプレートダウンロードエラー:', error);
+    }
+  };
+
   // ステータス色取得
   const getStatusColor = (status: ProcessStatus) => {
     switch (status) {
@@ -564,7 +594,7 @@ const DataManagement: React.FC = () => {
                       variant="outlined"
                       startIcon={<GetApp />}
                       fullWidth
-                      onClick={() => console.log(`${dataType}テンプレートダウンロード`)}
+                      onClick={() => handleTemplateDownload(dataType)}
                     >
                       テンプレートダウンロード
                     </Button>

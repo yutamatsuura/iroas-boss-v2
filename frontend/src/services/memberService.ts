@@ -7,66 +7,68 @@ import { ApiService } from './apiClient';
 
 // 会員ステータス
 export enum MemberStatus {
-  ACTIVE = 'アクティブ',
-  INACTIVE = '休会中',
-  WITHDRAWN = '退会済',
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  WITHDRAWN = 'WITHDRAWN',
 }
 
 // 称号
 export enum Title {
-  NONE = '称号なし',
-  KNIGHT_DAME = 'ナイト/デイム',
-  LORD_LADY = 'ロード/レディ',
-  KING_QUEEN = 'キング/クイーン',
-  EMPEROR_EMPRESS = 'エンペラー/エンブレス',
+  NONE = 'NONE',
+  KNIGHT_DAME = 'KNIGHT_DAME',
+  LORD_LADY = 'LORD_LADY',
+  KING_QUEEN = 'KING_QUEEN',
+  EMPEROR_EMPRESS = 'EMPEROR_EMPRESS',
 }
 
 // ユーザータイプ
 export enum UserType {
-  NORMAL = '通常',
-  CAUTION = '注意',
+  NORMAL = 'NORMAL',
+  ATTENTION = 'ATTENTION',
 }
 
 // 加入プラン
 export enum Plan {
-  HERO = 'ヒーロープラン',
-  TEST = 'テストプラン',
+  HERO = 'HERO',
+  TEST = 'TEST',
 }
 
 // 決済方法
 export enum PaymentMethod {
-  CARD = 'カード決済',
-  BANK_TRANSFER = '口座振替',
-  BANK_DEPOSIT = '銀行振込',
-  INFOCART = 'インフォカート',
+  CARD = 'CARD',
+  TRANSFER = 'TRANSFER',
+  BANK = 'BANK',
+  INFOCART = 'INFOCART',
 }
 
 // 性別
 export enum Gender {
-  MALE = '男性',
-  FEMALE = '女性',
-  OTHER = 'その他',
+  MALE = 'MALE',
+  FEMALE = 'FEMALE',
+  OTHER = 'OTHER',
 }
 
 // 口座種別
 export enum AccountType {
-  NORMAL = '普通',
-  CURRENT = '当座',
+  ORDINARY = 'ORDINARY',
+  CHECKING = 'CHECKING',
 }
 
-// 会員データインターフェース（29項目 + ID）
+// 会員データインターフェース（30項目 + ID）
 export interface Member {
   id: number;
-  status: MemberStatus;
-  memberNumber: string; // 7桁数字
+  status: MemberStatus | string;
+  member_number?: string; // APIからのレスポンス用（11桁）
+  memberNumber?: string; // フロントエンド互換性（11桁）
   name: string;
-  nameKana: string;
   email: string;
-  title: Title;
-  userType: UserType;
-  plan: Plan;
-  paymentMethod: PaymentMethod;
-  registrationDate: string;
+  title: Title | string;
+  userType?: UserType;
+  plan: Plan | string;
+  payment_method?: string; // APIからのレスポンス用
+  paymentMethod?: PaymentMethod; // フロントエンド互換性
+  registration_date?: string; // APIからのレスポンス用
+  registrationDate?: string; // フロントエンド互換性
   withdrawalDate?: string;
   phone?: string;
   gender?: Gender;
@@ -75,50 +77,61 @@ export interface Member {
   address2?: string;
   address3?: string;
   uplineId?: string;
+  upline_id?: string; // APIからのレスポンス用
   uplineName?: string;
+  upline_name?: string; // APIからのレスポンス用
   referrerId?: string;
+  referrer_id?: string; // APIからのレスポンス用
   referrerName?: string;
+  referrer_name?: string; // APIからのレスポンス用
   bankName?: string;
+  bank_name?: string; // APIからのレスポンス用
   bankCode?: string;
+  bank_code?: string; // APIからのレスポンス用
   branchName?: string;
+  branch_name?: string; // APIからのレスポンス用
   branchCode?: string;
+  branch_code?: string; // APIからのレスポンス用
   accountNumber?: string;
+  account_number?: string; // APIからのレスポンス用
   yuchoSymbol?: string;
+  yucho_symbol?: string; // APIからのレスポンス用
   yuchoNumber?: string;
+  yucho_number?: string; // APIからのレスポンス用
   accountType?: AccountType;
+  account_type?: AccountType; // APIからのレスポンス用
   notes?: string;
 }
 
 // 会員作成/更新用インターフェース
 export interface MemberInput {
   status?: MemberStatus;
-  memberNumber: string;
+  member_number: string;
   name: string;
-  nameKana: string;
   email: string;
   title?: Title;
-  userType?: UserType;
+  user_type?: UserType;
   plan: Plan;
-  paymentMethod: PaymentMethod;
-  registrationDate?: string;
+  payment_method: PaymentMethod;
+  registration_date?: string;
   phone?: string;
   gender?: Gender;
-  postalCode?: string;
+  postal_code?: string;
   prefecture?: string;
   address2?: string;
   address3?: string;
-  uplineId?: string;
-  uplineName?: string;
-  referrerId?: string;
-  referrerName?: string;
-  bankName?: string;
-  bankCode?: string;
-  branchName?: string;
-  branchCode?: string;
-  accountNumber?: string;
-  yuchoSymbol?: string;
-  yuchoNumber?: string;
-  accountType?: AccountType;
+  upline_id?: string;
+  upline_name?: string;
+  referrer_id?: string;
+  referrer_name?: string;
+  bank_name?: string;
+  bank_code?: string;
+  branch_name?: string;
+  branch_code?: string;
+  account_number?: string;
+  yucho_symbol?: string;
+  yucho_number?: string;
+  account_type?: AccountType;
   notes?: string;
 }
 
@@ -139,13 +152,17 @@ export interface MemberSearchParams {
 // 会員一覧レスポンス
 export interface MemberListResponse {
   members: Member[];
-  totalCount: number;
-  activeCount: number;
-  inactiveCount: number;
-  withdrawnCount: number;
-  page: number;
-  perPage: number;
-  totalPages: number;
+  total_count: number;
+  active_count: number;
+  inactive_count: number;
+  withdrawn_count: number;
+  totalCount?: number;  // 後方互換性
+  activeCount?: number;
+  inactiveCount?: number;
+  withdrawnCount?: number;
+  page?: number;
+  perPage?: number;
+  totalPages?: number;
 }
 
 // スポンサー変更リクエスト
@@ -155,7 +172,7 @@ export interface SponsorChangeRequest {
 }
 
 export class MemberService {
-  private static readonly BASE_URL = '/members';
+  private static readonly BASE_URL = '/v1/members';
 
   /**
    * 会員一覧取得
@@ -165,10 +182,17 @@ export class MemberService {
   }
 
   /**
-   * 会員詳細取得
+   * 会員詳細取得（ID）
    */
   static async getMemberById(id: number): Promise<Member> {
     return ApiService.get<Member>(`${this.BASE_URL}/${id}`);
+  }
+
+  /**
+   * 会員詳細取得（会員番号）
+   */
+  static async getMemberByNumber(memberNumber: string): Promise<Member> {
+    return ApiService.get<Member>(`${this.BASE_URL}/${memberNumber}`);
   }
 
   /**
@@ -179,17 +203,31 @@ export class MemberService {
   }
 
   /**
-   * 会員情報更新
+   * 会員情報更新（ID）
    */
   static async updateMember(id: number, member: Partial<MemberInput>): Promise<Member> {
     return ApiService.put<Member>(`${this.BASE_URL}/${id}`, member);
   }
 
   /**
-   * 退会処理
+   * 会員情報更新（会員番号）
+   */
+  static async updateMemberByNumber(memberNumber: string, member: Partial<MemberInput>): Promise<Member> {
+    return ApiService.put<Member>(`${this.BASE_URL}/${memberNumber}`, member);
+  }
+
+  /**
+   * 退会処理（ID）
    */
   static async withdrawMember(id: number, reason?: string): Promise<Member> {
     return ApiService.post<Member>(`${this.BASE_URL}/${id}/withdraw`, { reason });
+  }
+
+  /**
+   * 退会処理（会員番号）
+   */
+  static async withdrawMemberByNumber(memberNumber: string, reason?: string): Promise<any> {
+    return ApiService.post<any>(`${this.BASE_URL}/${memberNumber}/withdraw`, { reason });
   }
 
   /**
