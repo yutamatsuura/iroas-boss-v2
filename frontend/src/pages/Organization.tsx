@@ -323,8 +323,12 @@ const Organization: React.FC = () => {
               <Typography variant="h6">組織全体表示</Typography>
             )}
           </Box>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Chip label={`${currentMaxLevel}階層まで表示`} size="small" />
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Chip 
+              label={`${currentMaxLevel}階層まで表示`} 
+              size="small" 
+              sx={{ mt: 0.5 }}
+            />
             <Button
               size="small"
               variant="outlined"
@@ -400,15 +404,27 @@ const Organization: React.FC = () => {
         <Grid item xs={12} sm={6}>
           <Card>
             <CardContent>
-              <Typography variant="body2" color="text.secondary">
-                アクティブメンバー
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                メンバー構成
               </Typography>
-              <Typography variant="h4" fontWeight="bold" color="success.main">
-                {organizationStats?.active_members || 0}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                退会者: {organizationStats?.withdrawn_members || 0}名
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2, mb: 1 }}>
+                <Box>
+                  <Typography variant="h5" fontWeight="bold" color="success.main">
+                    {organizationStats?.active_members || 0}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    アクティブ
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="h5" fontWeight="bold" color="error.main">
+                    {organizationStats?.withdrawn_members || 0}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    退会者
+                  </Typography>
+                </Box>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
