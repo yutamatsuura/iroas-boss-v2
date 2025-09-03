@@ -12,10 +12,11 @@ import {
   Chip,
 } from '@mui/material';
 import { Member } from '../services/memberService';
+import { OrganizationNode } from '../services/organizationService';
 
 interface MemberDetailProps {
   open: boolean;
-  member: Member | null;
+  member: Member | OrganizationNode | null;
   onClose: () => void;
 }
 
@@ -105,9 +106,9 @@ const MemberDetail: React.FC<MemberDetailProps> = ({ open, member, onClose }) =>
         {/* 基本情報 */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" sx={{ mb: 2 }}>基本情報</Typography>
-          <DetailRow label="会員番号" value={member.member_number || member.memberNumber} />
+          <DetailRow label="会員番号" value={member.member_number || (member as any).memberNumber} />
           <DetailRow label="氏名" value={member.name} />
-          <DetailRow label="メールアドレス" value={member.email} />
+          <DetailRow label="メールアドレス" value={(member as any).email || '-'} />
           <DetailRow label="ステータス" value={statusDisplayMap[member.status] || member.status} />
         </Box>
 
@@ -117,9 +118,12 @@ const MemberDetail: React.FC<MemberDetailProps> = ({ open, member, onClose }) =>
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" sx={{ mb: 2 }}>MLM情報</Typography>
           <DetailRow label="称号" value={titleDisplayMap[member.title] || member.title} />
-          <DetailRow label="ユーザータイプ" value={userTypeDisplayMap[member.user_type || member.userType] || member.user_type || member.userType} />
-          <DetailRow label="加入プラン" value={planDisplayMap[member.plan] || member.plan} />
-          <DetailRow label="決済方法" value={paymentMethodDisplayMap[member.payment_method || member.paymentMethod] || member.payment_method || member.paymentMethod} />
+          <DetailRow label="ユーザータイプ" value={userTypeDisplayMap[(member as any).user_type || (member as any).userType] || (member as any).user_type || (member as any).userType} />
+          <DetailRow label="加入プラン" value={planDisplayMap[(member as any).plan] || (member as any).plan} />
+          <DetailRow label="決済方法" value={paymentMethodDisplayMap[(member as any).payment_method || (member as any).paymentMethod] || (member as any).payment_method || (member as any).paymentMethod} />
+          {'level' in member && <DetailRow label="階層レベル" value={member.level} />}
+          {'hierarchy_path' in member && <DetailRow label="組織階層" value={member.hierarchy_path} />}
+          {'is_direct' in member && <DetailRow label="直紹介" value={member.is_direct ? 'はい' : 'いいえ'} />}
         </Box>
 
         <Divider sx={{ my: 2 }} />
@@ -179,10 +183,28 @@ const MemberDetail: React.FC<MemberDetailProps> = ({ open, member, onClose }) =>
 
         <Divider sx={{ my: 2 }} />
 
+        {/* 売上情報（組織データの場合のみ） */}
+        {'left_sales' in member && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>売上情報</Typography>
+              <DetailRow label="左ライン売上" value={`¥${member.left_sales?.toLocaleString() || 0}`} />
+              <DetailRow label="右ライン売上" value={`¥${member.right_sales?.toLocaleString() || 0}`} />
+              <DetailRow label="左人数" value={member.left_count} />
+              <DetailRow label="右人数" value={member.right_count} />
+              <DetailRow label="新規購入" value={`¥${(member as any).new_purchase?.toLocaleString() || 0}`} />
+              <DetailRow label="リピート購入" value={`¥${(member as any).repeat_purchase?.toLocaleString() || 0}`} />
+              <DetailRow label="追加購入" value={`¥${(member as any).additional_purchase?.toLocaleString() || 0}`} />
+              <DetailRow label="総売上" value={`¥${(member as any).total_sales?.toLocaleString() || 0}`} />
+            </Box>
+          </>
+        )}
+
         {/* その他 */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" sx={{ mb: 2 }}>その他</Typography>
-          <DetailRow label="備考" value={member.notes} />
+          <DetailRow label="備考" value={(member as any).notes || '-'} />
         </Box>
       </DialogContent>
       <DialogActions>

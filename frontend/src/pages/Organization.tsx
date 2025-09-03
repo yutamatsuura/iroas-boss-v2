@@ -104,10 +104,19 @@ const Organization: React.FC = () => {
   };
 
   // メンバー詳細表示
-  const handleMemberDetail = (member: OrganizationNode) => {
-    setSelectedMember(member);
-    // パンくずリスト更新（実際は階層を遡って構築）
-    setBreadcrumbs([member]);
+  const handleMemberDetail = async (member: OrganizationNode) => {
+    try {
+      // 組織データから詳細情報を取得
+      const memberDetail = await OrganizationService.getOrganizationMemberDetail(member.member_number);
+      setSelectedMember(memberDetail);
+      // パンくずリスト更新（実際は階層を遡って構築）
+      setBreadcrumbs([memberDetail]);
+    } catch (error) {
+      console.error('会員詳細取得エラー:', error);
+      // エラーの場合は元のデータを使用
+      setSelectedMember(member);
+      setBreadcrumbs([member]);
+    }
   };
 
   // スポンサー変更ダイアログ表示

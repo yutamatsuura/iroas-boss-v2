@@ -219,8 +219,17 @@ def get_organization_tree(
                 if level <= max_level:
                     # 軽量データ構築（フィールド名スペース除去）
                     # CSVヘッダーに空白があるため、トリム処理が必要
-                    member_number = row.get(' 会員番号', '') or row.get('会員番号', '')
-                    member_number = member_number.strip() if member_number else ''
+                    member_number_raw = row.get(' 会員番号', '') or row.get('会員番号', '')
+                    member_number_raw = member_number_raw.strip() if member_number_raw else ''
+                    
+                    # 会員番号を11桁に整形（先頭ゼロ埋め）
+                    if member_number_raw and member_number_raw != '0':
+                        try:
+                            member_number = str(int(member_number_raw)).zfill(11)
+                        except (ValueError, TypeError):
+                            member_number = str(member_number_raw).zfill(11)
+                    else:
+                        member_number = member_number_raw
                     
                     original_name = row.get(' 会員氏名', '') or row.get('会員氏名', '')
                     original_name = original_name.strip() if original_name else ''
@@ -545,3 +554,88 @@ def export_organization_csv(
         raise HTTPException(status_code=404, detail="CSVファイルが見つかりません")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"CSV出力エラー: {str(e)}")
+
+
+@router.get("/member/{member_number}", summary="組織メンバー詳細取得")
+def get_organization_member_detail(
+    member_number: str,
+    db: Session = Depends(get_db)
+):
+    """組織データから特定メンバーの詳細を取得"""
+    try:
+        # 11桁形式に正規化
+        normalized_member_number = member_number.zfill(11)
+        
+        with open(CSV_BINARY_PATH, 'r', encoding='utf-8') as file:
+            csv_reader = csv.DictReader(file)
+            
+            for row in csv_reader:
+                # 会員番号の取得と正規化
+                member_number_raw = row.get(' 会員番号', '') or row.get('会員番号', '')
+                member_number_raw = member_number_raw.strip() if member_number_raw else ''
+                
+                if member_number_raw and member_number_raw != '0':
+                    try:
+                        csv_member_number = str(int(member_number_raw)).zfill(11)
+                    except (ValueError, TypeError):
+                        csv_member_number = str(member_number_raw).zfill(11)
+                else:
+                    continue
+                
+                # 会員番号が一致する場合、詳細データを構築
+                if csv_member_number == normalized_member_number:
+                    original_name = row.get(' 会員氏名', '') or row.get('会員氏名', '')
+                    original_name = original_name.strip() if original_name else ''
+                    
+                    withdrawn_flag = row.get(' 退', '') or row.get('退', '')
+                    withdrawn_flag = withdrawn_flag.strip() if withdrawn_flag else ''
+                    is_withdrawn = "(退)" in str(withdrawn_flag)
+                    
+                    display_name = f"（退会者）{original_name}" if is_withdrawn and original_name else original_name
+                    
+                    level_str = row.get('階層', '0') or '0'
+                    level = int(level_str) if level_str.isdigit() else 0
+                    
+                    member_detail = {
+                        "member_number": csv_member_number,
+                        "name": display_name,
+                        "title": (row.get(' 資格名', '') or row.get('資格名', '')).strip(),
+                        "status": "WITHDRAWN" if is_withdrawn else "ACTIVE",
+                        "level": level,
+                        "hierarchy_path": (row.get(' 組織階層', '') or row.get('組織階層', '')).strip(),
+                        "registration_date": (row.get(' 登録日', '') or row.get('登録日', '')).strip(),
+                        "is_direct": "(直)" in str(row.get(' 直', '') or row.get('直', '') or ''),
+                        "is_withdrawn": is_withdrawn,
+                        "left_count": _safe_int(row.get(' 左人数（A）', '') or row.get('左人数（A）', '')),
+                        "right_count": _safe_int(row.get(' 右人数（A）', '') or row.get('右人数（A）', '')),
+                        "left_sales": _safe_int(row.get(' 左実績', '') or row.get('左実績', '')),
+                        "right_sales": _safe_int(row.get(' 右実績', '') or row.get('右実績', '')),
+                        "new_purchase": _safe_int(row.get(' 新規購入', '') or row.get('新規購入', '')),
+                        "repeat_purchase": _safe_int(row.get(' リピート購入', '') or row.get('リピート購入', '')),
+                        "additional_purchase": _safe_int(row.get(' 追加購入', '') or row.get('追加購入', '')),
+                        "total_sales": _safe_int(row.get(' 左実績', '') or row.get('左実績', '')) + _safe_int(row.get(' 右実績', '') or row.get('右実績', ''))
+                    }
+                    
+                    return member_detail
+        
+        # メンバーが見つからない場合
+        raise HTTPException(status_code=404, detail=f"会員番号 {normalized_member_number} が見つかりません")
+        
+    except FileNotFoundError:
+        logger.error(f"組織データCSVファイルが見つかりません: {CSV_BINARY_PATH}")
+        raise HTTPException(status_code=404, detail="組織データファイルが見つかりません")
+    except Exception as e:
+        logger.error(f"会員詳細取得エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"会員詳細取得エラー: {str(e)}")
+
+
+def _safe_int(value: str) -> int:
+    """安全な整数変換"""
+    try:
+        if not value or value.strip() == '':
+            return 0
+        # カンマを除去してから変換
+        clean_value = str(value).replace(',', '').strip()
+        return int(clean_value) if clean_value.isdigit() else 0
+    except (ValueError, TypeError):
+        return 0

@@ -106,6 +106,13 @@ export class OrganizationService {
   }
 
   /**
+   * 組織メンバー詳細取得
+   */
+  static async getOrganizationMemberDetail(memberNumber: string): Promise<OrganizationNode> {
+    return ApiService.get<OrganizationNode>(`${this.BASE_URL}/member/${memberNumber}`);
+  }
+
+  /**
    * 組織図CSV出力
    */
   static async exportOrganizationCsv(
