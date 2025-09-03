@@ -436,7 +436,7 @@ def get_organization_stats(db: Session = Depends(get_db)):
                 stats['total_members'] += 1
                 
                 # 退会フラグ確認（高速）
-                withdrawn_flag = row.get('退', '') or ''
+                withdrawn_flag = row.get(' 退', '') or row.get('退', '') or ''
                 is_withdrawn = "(退)" in str(withdrawn_flag)
                 if not is_withdrawn:
                     stats['active_members'] += 1

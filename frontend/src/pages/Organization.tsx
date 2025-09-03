@@ -34,6 +34,7 @@ import {
   Visibility,
   Download,
 } from '@mui/icons-material';
+import { Tooltip } from '@mui/material';
 import { 
   OrganizationService, 
   OrganizationNode, 
@@ -123,6 +124,20 @@ const Organization: React.FC = () => {
     const getStatusColor = OrganizationService.getStatusColor;
     const getTitleColor = OrganizationService.getTitleColor;
 
+    // ステータス日本語変換
+    const getStatusLabel = (status: string) => {
+      switch (status.toUpperCase()) {
+        case 'ACTIVE':
+          return 'アクティブ';
+        case 'INACTIVE':
+          return '休会中';
+        case 'WITHDRAWN':
+          return '退会済';
+        default:
+          return status;
+      }
+    };
+
     return (
       <Box key={node.id}>
         <Card
@@ -168,7 +183,7 @@ const Organization: React.FC = () => {
                     ({node.member_number})
                   </Typography>
                   <Chip
-                    label={node.status}
+                    label={getStatusLabel(node.status)}
                     size="small"
                     color={getStatusColor(node.status)}
                   />
@@ -203,29 +218,31 @@ const Organization: React.FC = () => {
 
               {/* アクションボタン */}
               <Box sx={{ display: 'flex', gap: 0.5 }}>
-                <IconButton
-                  size="small"
-                  color="primary"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleMemberDetail(node);
-                  }}
-                  title="詳細表示"
-                >
-                  <Visibility fontSize="small" />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  color="warning"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSponsorChange(node);
-                  }}
-                  title="スポンサー変更"
-                  disabled={node.is_withdrawn}
-                >
-                  <SwapHoriz fontSize="small" />
-                </IconButton>
+                <Tooltip title="会員詳細表示" arrow>
+                  <IconButton
+                    size="small"
+                    color="primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMemberDetail(node);
+                    }}
+                  >
+                    <Visibility fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="スポンサー変更" arrow>
+                  <IconButton
+                    size="small"
+                    color="warning"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSponsorChange(node);
+                    }}
+                    disabled={node.is_withdrawn}
+                  >
+                    <SwapHoriz fontSize="small" />
+                  </IconButton>
+                </Tooltip>
               </Box>
             </Box>
           </CardContent>
