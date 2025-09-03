@@ -399,61 +399,46 @@ const Organization: React.FC = () => {
         </Grid>
       </Paper>
 
-      {/* 組織統計 */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12}>
-          <Card>
-            <CardContent sx={{ py: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
-                {/* メンバー構成 */}
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    メンバー構成
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h6" fontWeight="bold" color="success.main">
-                        {organizationStats?.active_members || 0}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        アクティブ
-                      </Typography>
-                    </Box>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h6" fontWeight="bold" color="error.main">
-                        {organizationStats?.withdrawn_members || 0}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        退会者
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Box>
-                
-                {/* 区切り線 */}
-                <Box sx={{ width: 1, height: 40, bgcolor: 'divider' }} />
-                
-                {/* 最大階層 */}
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    最大階層
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold">
-                    {organizationStats?.max_level || 0}
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
 
       {/* 組織ツリー表示 */}
       <Paper sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-          <Typography variant="h6" fontWeight="600">
-            組織階層構造
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <Typography variant="h6" fontWeight="600">
+              組織階層構造
+            </Typography>
+            
+            {/* 統計情報をヘッダーに統合 */}
+            <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="body2" fontWeight="bold" color="success.main">
+                    {organizationStats?.active_members || 0}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    アクティブ
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="body2" fontWeight="bold" color="error.main">
+                    {organizationStats?.withdrawn_members || 0}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    退会者
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="body2" fontWeight="bold">
+                    {organizationStats?.max_level || 0}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    最大階層
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+          
           <Box>
             <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
               💡 要件: 退会時は手動で組織調整を行います（自動圧縮なし）
