@@ -35,6 +35,7 @@ import {
   Download,
 } from '@mui/icons-material';
 import { Tooltip } from '@mui/material';
+import MemberDetail from '../components/MemberDetail';
 import { 
   OrganizationService, 
   OrganizationNode, 
@@ -73,6 +74,9 @@ const Organization: React.FC = () => {
   const [showSponsorDialog, setShowSponsorDialog] = useState(false);
   const [breadcrumbs, setBreadcrumbs] = useState<OrganizationNode[]>([]);
   const [viewMode, setViewMode] = useState<'tree' | 'table'>('tree');
+  const [currentMaxLevel, setCurrentMaxLevel] = useState(5);
+  const [focusedMember, setFocusedMember] = useState<OrganizationNode | null>(null);
+  const [showMemberDetail, setShowMemberDetail] = useState(false);
 
 
   useEffect(() => {
@@ -80,11 +84,11 @@ const Organization: React.FC = () => {
   }, []);
 
   // データ取得
-  const fetchOrganizationData = async () => {
+  const fetchOrganizationData = async (maxLevel = currentMaxLevel, focusMember?: string) => {
     setLoading(true);
     try {
-      // 組織ツリーデータを取得（10階層まで表示）
-      const treeData = await OrganizationService.getOrganizationTree(undefined, 10);
+      // 組織ツリーデータを取得
+      const treeData = await OrganizationService.getOrganizationTree(focusMember, maxLevel);
       setOrganizationData(treeData.root_nodes);
       
       // 組織統計データを取得
@@ -95,6 +99,27 @@ const Organization: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // さらに深い階層を表示
+  const loadMoreLevels = async () => {
+    const newMaxLevel = currentMaxLevel + 5;
+    setCurrentMaxLevel(newMaxLevel);
+    await fetchOrganizationData(newMaxLevel);
+  };
+
+  // 特定メンバーにフォーカス
+  const focusOnMember = async (member: OrganizationNode) => {
+    setFocusedMember(member);
+    setBreadcrumbs([member]);
+    await fetchOrganizationData(currentMaxLevel, member.member_number);
+  };
+
+  // 全体表示に戻る
+  const resetToFullView = async () => {
+    setFocusedMember(null);
+    setBreadcrumbs([]);
+    await fetchOrganizationData(currentMaxLevel);
   };
 
   // ノード展開/折りたたみ
@@ -115,11 +140,11 @@ const Organization: React.FC = () => {
       console.error('会員詳細取得エラー:', error);
       // エラーの場合は元のデータを使用
       setSelectedMember(member);
-      setBreadcrumbs([member]);
     }
+    setShowMemberDetail(true);
   };
 
-  // スポンサー変更ダイアログ表示
+  // 紹介者変更ダイアログ表示
   const handleSponsorChange = (member: OrganizationNode) => {
     setSelectedMember(member);
     setShowSponsorDialog(true);
@@ -163,7 +188,7 @@ const Organization: React.FC = () => {
               boxShadow: node.is_withdrawn ? 1 : 2,
             },
           }}
-          onClick={() => handleMemberDetail(node)}
+          onClick={() => focusOnMember(node)}
         >
           <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -239,7 +264,7 @@ const Organization: React.FC = () => {
                     <Visibility fontSize="small" />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="スポンサー変更" arrow>
+                <Tooltip title="紹介者変更" arrow>
                   <IconButton
                     size="small"
                     color="warning"
@@ -281,21 +306,36 @@ const Organization: React.FC = () => {
         </Typography>
       </Box>
 
-      {/* パンくずナビ */}
-      {breadcrumbs.length > 0 && (
-        <Paper sx={{ p: 2, mb: 3 }}>
-          <Breadcrumbs>
-            <Link color="inherit" href="#" onClick={() => setBreadcrumbs([])}>
-              組織全体
-            </Link>
-            {breadcrumbs.map((crumb, index) => (
-              <Typography key={crumb.id} color="text.primary">
-                {crumb.name} ({crumb.member_number})
-              </Typography>
-            ))}
-          </Breadcrumbs>
-        </Paper>
-      )}
+      {/* パンくずナビと階層コントロール */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            {focusedMember ? (
+              <Breadcrumbs>
+                <Link color="inherit" href="#" onClick={resetToFullView}>
+                  組織全体
+                </Link>
+                <Typography color="text.primary">
+                  {focusedMember.name} ({focusedMember.member_number}) の配下組織
+                </Typography>
+              </Breadcrumbs>
+            ) : (
+              <Typography variant="h6">組織全体表示</Typography>
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Chip label={`${currentMaxLevel}階層まで表示`} size="small" />
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<ExpandMore />}
+              onClick={loadMoreLevels}
+            >
+              さらに表示 (+5階層)
+            </Button>
+          </Box>
+        </Box>
+      </Paper>
 
       {/* 検索・フィルター */}
       <Paper sx={{ p: 3, mb: 3 }}>
@@ -416,7 +456,7 @@ const Organization: React.FC = () => {
         )}
       </Paper>
 
-      {/* スポンサー変更ダイアログ */}
+      {/* 紹介者変更ダイアログ */}
       <Dialog
         open={showSponsorDialog}
         onClose={() => setShowSponsorDialog(false)}
@@ -424,18 +464,18 @@ const Organization: React.FC = () => {
         fullWidth
       >
         <DialogTitle>
-          スポンサー変更 - {selectedMember?.name}
+          紹介者変更 - {selectedMember?.name}
         </DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>
-            スポンサー変更は組織構造に重大な影響を与えます。慎重に実行してください。
+            紹介者変更は組織構造に重大な影響を与えます。慎重に実行してください。
           </Alert>
           
           <TextField
             fullWidth
-            label="新しいスポンサーの会員番号"
+            label="新しい紹介者の会員番号"
             margin="normal"
-            placeholder="7桁の会員番号を入力"
+            placeholder="11桁の会員番号を入力"
           />
           
           <TextField
@@ -444,7 +484,7 @@ const Organization: React.FC = () => {
             margin="normal"
             multiline
             rows={3}
-            placeholder="スポンサー変更の理由を詳しく記入してください"
+            placeholder="紹介者変更の理由を詳しく記入してください"
           />
         </DialogContent>
         <DialogActions>
@@ -455,7 +495,7 @@ const Organization: React.FC = () => {
             variant="contained"
             color="warning"
             onClick={() => {
-              console.log('スポンサー変更実行');
+              console.log('紹介者変更実行');
               setShowSponsorDialog(false);
             }}
           >
@@ -463,6 +503,13 @@ const Organization: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* 会員詳細ダイアログ */}
+      <MemberDetail
+        open={showMemberDetail}
+        member={selectedMember}
+        onClose={() => setShowMemberDetail(false)}
+      />
     </Box>
   );
 };

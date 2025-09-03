@@ -202,9 +202,9 @@ def get_organization_tree(
 ):
     """組織ツリー取得（段階的表示）"""
     try:
-        # 初期表示は軽量化：最大10階層まで表示
+        # 初期表示は軽量化：最大5階層まで表示
         if max_level is None or max_level > 20:
-            max_level = 10  # デフォルト10階層で表示
+            max_level = 5  # デフォルト5階層で表示
         
         # 制限付きでCSVデータを読み込み
         limited_org_data = []
