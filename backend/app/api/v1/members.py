@@ -62,7 +62,7 @@ class MemberUpdate(BaseModel):
     withdrawalDate: Optional[str] = None
 
 @router.get("/")
-def get_members(
+def get_members_endpoint(
     page: int = Query(1, ge=1),
     perPage: int = Query(20, ge=1, le=100),
     memberNumber: str = Query("", description="会員番号で検索"),
@@ -70,6 +70,18 @@ def get_members(
     email: str = Query("", description="メールアドレスで検索"),
     sortBy: str = Query("memberNumber", description="ソート項目"),
     sortOrder: str = Query("asc", description="ソート順")
+):
+    """会員一覧取得（検索対応版）"""
+    return get_members(page, perPage, memberNumber, name, email, sortBy, sortOrder)
+
+def get_members(
+    page: int = 1,
+    perPage: int = 20,
+    memberNumber: str = "",
+    name: str = "",
+    email: str = "",
+    sortBy: str = "memberNumber",
+    sortOrder: str = "asc"
 ):
     """会員一覧取得（検索対応版）"""
     try:

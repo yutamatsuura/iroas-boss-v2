@@ -195,10 +195,16 @@ def build_organization_tree(org_data: List[Dict]) -> List[OrganizationNode]:
 
 
 @router.get("/tree", response_model=OrganizationTree)
-def get_organization_tree(
+def get_organization_tree_endpoint(
     member_id: Optional[str] = Query(None, description="特定メンバーをルートとしたサブツリー取得（会員番号）"),
-    max_level: Optional[int] = Query(3, description="最大表示レベル（デフォルト3階層）"),
-    db: Session = Depends(get_db)
+    max_level: Optional[int] = Query(3, description="最大表示レベル（デフォルト3階層）")
+):
+    """組織ツリー取得（段階的表示）"""
+    return get_organization_tree(member_id, max_level)
+
+def get_organization_tree(
+    member_id: Optional[str] = None,
+    max_level: Optional[int] = 3
 ):
     """組織ツリー取得（段階的表示）"""
     try:
@@ -329,23 +335,50 @@ def get_organization_tree(
             if item['level'] == 0:
                 root_nodes.append(node)
         
-        # より適切な親子関係構築（階層パスベース）
+        # バイナリツリー階層パターンに基づく親子関係構築（改良版）
+        def find_parent_by_position(current_index, current_level, all_data):
+            """CSVの位置と階層レベルに基づいて親を特定する"""
+            import re
+            
+            if current_level <= 1:
+                # レベル0またはレベル1はルートまたは直下
+                if current_level == 1:
+                    # レベル1の親は必ずレベル0（ルート）
+                    for i in range(current_index - 1, -1, -1):
+                        if all_data[i]['level'] == 0:
+                            return all_data[i]['hierarchy_path']
+                return None
+            
+            # レベル2以上の場合、CSVで上方向に検索して直近の親レベルを見つける
+            parent_level = current_level - 1
+            
+            # 現在位置から上に向かって親レベルを検索
+            for i in range(current_index - 1, -1, -1):
+                item = all_data[i]
+                if item['level'] == parent_level:
+                    return item['hierarchy_path']
+            
+            return None
+        
+        # 階層パターンマッピングを作成
+        hierarchy_to_member = {}
         for item in limited_org_data:
-            if item['level'] > 0:
-                current_node = node_map[item['id']]
+            hierarchy_to_member[item['hierarchy_path']] = item
+        
+        # 元の順序を保持して親子関係を構築（CSVの順序が重要）
+        for i, item in enumerate(limited_org_data):
+            current_node = node_map[item['id']]
+            current_level = item['level']
+            
+            if current_level > 0:
+                # CSVの位置に基づいて親を特定（改良版）
+                parent_hierarchy = find_parent_by_position(i, current_level, limited_org_data)
                 
-                # 組織階層パスから親を特定
-                # 例: "┣ 1 LEFT" -> レベル1, "┃┣ 2 LEFT" -> レベル2
-                # 直前のレベルで最も近い親ノードを探す
-                best_parent = None
-                for parent_item in limited_org_data:
-                    if parent_item['level'] == item['level'] - 1:
-                        # 最も近い親候補として採用
-                        best_parent = parent_item
-                
-                if best_parent and best_parent['id'] in node_map:
-                    parent_node = node_map[best_parent['id']]
-                    parent_node.children.append(current_node)
+                if parent_hierarchy and parent_hierarchy in hierarchy_to_member:
+                    parent_item = hierarchy_to_member[parent_hierarchy]
+                    if parent_item['id'] in node_map:
+                        parent_node = node_map[parent_item['id']]
+                        parent_node.children.append(current_node)
         
         # 特定メンバーにフォーカスする場合
         if member_id:
@@ -378,6 +411,10 @@ def get_organization_tree(
         )
         
     except Exception as e:
+        # エラー詳細をログ出力（デバッグ用）
+        import traceback
+        print(f"組織ツリーエラー詳細: {str(e)}")
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"組織ツリー取得エラー: {str(e)}")
 
 

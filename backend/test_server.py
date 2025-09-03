@@ -4,6 +4,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import sys
+import os
+
+# パスを追加してアプリモジュールをインポート可能にする
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 app = FastAPI(title="IROAS BOSS V2 Test Server")
 
@@ -15,6 +20,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# APIルーターを登録
+try:
+    from app.api.v1.organization import router as organization_router
+    from app.api.v1.members import router as members_router
+    
+    app.include_router(organization_router, prefix="/api/v1/organization")
+    app.include_router(members_router, prefix="/api/v1")
+    print("✅ APIルーター登録完了")
+except Exception as e:
+    print(f"❌ APIルーター登録エラー: {e}")
 
 @app.get("/")
 async def root():
@@ -29,4 +45,4 @@ async def health_check():
     }
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
