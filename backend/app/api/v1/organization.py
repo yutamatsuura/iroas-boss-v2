@@ -196,7 +196,7 @@ def build_organization_tree(org_data: List[Dict]) -> List[OrganizationNode]:
 
 @router.get("/tree", response_model=OrganizationTree)
 def get_organization_tree(
-    member_id: Optional[int] = Query(None, description="特定メンバーからのツリー取得"),
+    member_id: Optional[str] = Query(None, description="特定メンバーをルートとしたサブツリー取得（会員番号）"),
     max_level: Optional[int] = Query(3, description="最大表示レベル（デフォルト3階層）"),
     db: Session = Depends(get_db)
 ):
@@ -317,6 +317,21 @@ def get_organization_tree(
                 if best_parent and best_parent['id'] in node_map:
                     parent_node = node_map[best_parent['id']]
                     parent_node.children.append(current_node)
+        
+        # 特定メンバーにフォーカスする場合
+        if member_id:
+            # 11桁形式に正規化
+            normalized_member_id = member_id.zfill(11)
+            
+            # 指定されたメンバーをルートとしたサブツリーを抽出
+            focus_root = None
+            for item in limited_org_data:
+                if item['member_number'] == normalized_member_id:
+                    focus_root = node_map[item['id']]
+                    break
+            
+            if focus_root:
+                root_nodes = [focus_root]
         
         # 軽量統計計算
         total_members = len(limited_org_data)
