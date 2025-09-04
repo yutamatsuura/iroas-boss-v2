@@ -77,18 +77,23 @@ const Organization: React.FC = () => {
   const [currentMaxLevel, setCurrentMaxLevel] = useState(5);
   const [focusedMember, setFocusedMember] = useState<OrganizationNode | null>(null);
   const [showMemberDetail, setShowMemberDetail] = useState(false);
+  const [showActiveOnly, setShowActiveOnly] = useState(false);
 
 
   useEffect(() => {
     fetchOrganizationData();
   }, []);
 
+  useEffect(() => {
+    fetchOrganizationData(currentMaxLevel, focusedMember?.member_number);
+  }, [showActiveOnly]);
+
   // データ取得
   const fetchOrganizationData = async (maxLevel = currentMaxLevel, focusMember?: string) => {
     setLoading(true);
     try {
       // 組織ツリーデータを取得
-      const treeData = await OrganizationService.getOrganizationTree(focusMember, maxLevel);
+      const treeData = await OrganizationService.getOrganizationTree(focusMember, maxLevel, showActiveOnly);
       setOrganizationData(treeData.root_nodes);
       
       // 組織統計データを取得
@@ -105,7 +110,7 @@ const Organization: React.FC = () => {
   const loadMoreLevels = async () => {
     const newMaxLevel = currentMaxLevel + 5;
     setCurrentMaxLevel(newMaxLevel);
-    await fetchOrganizationData(newMaxLevel);
+    await fetchOrganizationData(newMaxLevel, focusedMember?.member_number);
   };
 
   // 特定メンバーにフォーカス
@@ -376,10 +381,12 @@ const Organization: React.FC = () => {
           <Grid item xs={12} sm={6} md={2}>
             <Button
               fullWidth
-              variant="outlined"
+              variant={showActiveOnly ? "contained" : "outlined"}
+              color={showActiveOnly ? "success" : "inherit"}
               startIcon={<FilterList />}
+              onClick={() => setShowActiveOnly(!showActiveOnly)}
             >
-              フィルター
+              {showActiveOnly ? "全メンバー" : "アクティブのみ"}
             </Button>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>

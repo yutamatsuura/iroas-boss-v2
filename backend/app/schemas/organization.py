@@ -21,6 +21,11 @@ class OrganizationNode(BaseModel):
     is_direct: bool = Field(False, description="直紹介フラグ")
     is_withdrawn: bool = Field(False, description="退会フラグ")
     
+    # 称号統合データ
+    current_title: str = Field("", description="現在の称号（会員管理データから）")
+    historical_title: str = Field("", description="過去最高称号（組織図データから）")
+    display_title: str = Field("", description="表示用称号（統合後）")
+    
     # 組織実績
     left_count: int = Field(0, description="左人数")
     right_count: int = Field(0, description="右人数") 

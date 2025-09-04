@@ -64,7 +64,8 @@ const titleDisplayMap: Record<string, string> = {
   'KNIGHT_DAME': 'ナイト/デイム',
   'LORD_LADY': 'ロード/レディ',
   'KING_QUEEN': 'キング/クイーン',
-  'EMPEROR_EMPRESS': 'エンペラー/エンブレス',
+  'EMPEROR_EMPRESS': 'エンペラー/エンプレス',
+  'COMPANY': '会社',
 };
 
 const planDisplayMap: Record<string, string> = {

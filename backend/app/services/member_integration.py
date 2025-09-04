@@ -50,6 +50,7 @@ class MemberIntegrationService:
                             'email': row.get('メールアドレス', '').strip(),
                             'phone': row.get('電話番号', '').strip(),
                             'status': row.get('﻿ステータス', '').strip(),
+                            'title': row.get('称号', '').strip(),  # 追加: 称号フィールド
                             'plan': row.get('加入プラン', '').strip(),
                             'payment_method': row.get('決済方法', '').strip(),
                             'gender': row.get('性別', '').strip(),
@@ -73,6 +74,11 @@ class MemberIntegrationService:
                         
             self.integration_enabled = True
             print(f"[INFO] 会員詳細データ読み込み完了: {len(self.member_details_cache)}件")
+            print(f"[DEBUG] 全キャッシュ会員番号: {list(self.member_details_cache.keys())}")
+            if '00000069700' in self.member_details_cache:
+                print(f"[DEBUG] 白石歩美データ: {self.member_details_cache['00000069700']}")
+            else:
+                print(f"[DEBUG] 白石歩美データが見つかりません")
             return True
             
         except Exception as e:

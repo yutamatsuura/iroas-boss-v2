@@ -76,11 +76,13 @@ export class OrganizationService {
    */
   static async getOrganizationTree(
     memberId?: number,
-    maxLevel?: number
+    maxLevel?: number,
+    activeOnly?: boolean
   ): Promise<OrganizationTree> {
     const params: any = {};
     if (memberId !== undefined) params.member_id = memberId;
     if (maxLevel !== undefined) params.max_level = maxLevel;
+    if (activeOnly !== undefined) params.active_only = activeOnly;
     
     return ApiService.get<OrganizationTree>(`${this.BASE_URL}/tree`, { params });
   }

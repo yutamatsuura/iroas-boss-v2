@@ -94,8 +94,18 @@ def read_organization_csv() -> List[Dict]:
                         return 0
                 
                 # 退会者の場合は表示名を調整（実際の会員番号を保持）
-                member_number = row.get('会員番号', '') or ''
-                original_name = row.get('会員氏名', '') or ''
+                member_number_raw = row.get(' 会員番号', '') or row.get('会員番号', '')
+                member_number_raw = member_number_raw.strip() if member_number_raw else ''
+                original_name = row.get(' 会員氏名', '') or row.get('会員氏名', '')
+                
+                # 会員番号を11桁に整形
+                if member_number_raw:
+                    try:
+                        member_number = str(int(member_number_raw)).zfill(11)
+                    except (ValueError, TypeError):
+                        member_number = str(member_number_raw).zfill(11)
+                else:
+                    member_number = '00000000000'
                 
                 if is_withdrawn:
                     # 退会者の場合：実際の会員番号は保持し、名前のみ表示調整
@@ -149,6 +159,13 @@ def build_organization_tree(org_data: List[Dict]) -> List[OrganizationNode]:
     # 全ノードをマップに格納
     for item in org_data:
         try:
+            # デバッグ: Pydantic変換前の値チェック
+            if item['member_number'] == '00000000000':
+                print(f"[DEBUG] Pydantic変換前データ:")
+                print(f"  current_title: {item.get('current_title')} (type: {type(item.get('current_title'))})")
+                print(f"  historical_title: {item.get('historical_title')} (type: {type(item.get('historical_title'))})")
+                print(f"  display_title: {item.get('display_title')} (type: {type(item.get('display_title'))})")
+            
             node = OrganizationNode(
                 id=item['id'],
                 member_number=item['member_number'],
@@ -168,7 +185,11 @@ def build_organization_tree(org_data: List[Dict]) -> List[OrganizationNode]:
                 additional_purchase=item['additional_purchase'],
                 children=[],
                 is_expanded=True,
-                status="WITHDRAWN" if item['is_withdrawn'] else "ACTIVE"
+                status="WITHDRAWN" if item['is_withdrawn'] else "ACTIVE",
+                # 称号統合フィールド
+                current_title=item.get('current_title', ''),
+                historical_title=item.get('historical_title', ''),
+                display_title=item.get('display_title', '')
             )
             node_map[item['id']] = node
             
@@ -197,20 +218,24 @@ def build_organization_tree(org_data: List[Dict]) -> List[OrganizationNode]:
 @router.get("/tree", response_model=OrganizationTree)
 def get_organization_tree_endpoint(
     member_id: Optional[str] = Query(None, description="特定メンバーをルートとしたサブツリー取得（会員番号）"),
-    max_level: Optional[int] = Query(3, description="最大表示レベル（デフォルト3階層）")
+    max_level: Optional[int] = Query(3, description="最大表示レベル（デフォルト3階層）"),
+    active_only: Optional[bool] = Query(False, description="アクティブメンバーのみ表示")
 ):
     """組織ツリー取得（段階的表示）"""
-    return get_organization_tree(member_id, max_level)
+    return get_organization_tree(member_id, max_level, active_only)
 
 def get_organization_tree(
     member_id: Optional[str] = None,
-    max_level: Optional[int] = 3
+    max_level: Optional[int] = 3,
+    active_only: Optional[bool] = False
 ):
     """組織ツリー取得（段階的表示）"""
     try:
-        # 初期表示は軽量化：最大5階層まで表示
-        if max_level is None or max_level > 20:
+        # 初期表示は軽量化：最大表示制限を緩和
+        if max_level is None:
             max_level = 5  # デフォルト5階層で表示
+        elif max_level > 100:  # 非常に高い値の場合のみ制限
+            max_level = 100
         
         # 制限付きでCSVデータを読み込み
         limited_org_data = []
@@ -232,6 +257,20 @@ def get_organization_tree(
                                 break
                         except (ValueError, TypeError):
                             continue
+        
+        # 称号統合のためのキャッシュ読み込み
+        from app.services.member_integration import member_integration_service
+        member_integration_service.load_member_details()
+        
+        # デバッグ: active_onlyフラグ確認
+        print(f"[DEBUG] active_only = {active_only}")
+        
+        # デバッグ: キャッシュ内容確認
+        print(f"[DEBUG] キャッシュ内会員番号: {list(member_integration_service.member_details_cache.keys())[:5]}")
+        if '00000000000' in member_integration_service.member_details_cache:
+            print(f"[DEBUG] 白石達也データ: {member_integration_service.member_details_cache['00000000000']}")
+        if '00000000400' in member_integration_service.member_details_cache:
+            print(f"[DEBUG] 澤原洋①データ: {member_integration_service.member_details_cache['00000000400']}")
         
         with open(CSV_BINARY_PATH, 'r', encoding='utf-8') as file:
             csv_reader = csv.DictReader(file)
@@ -273,13 +312,65 @@ def get_organization_tree(
                 withdrawn_flag = withdrawn_flag.strip() if withdrawn_flag else ''
                 is_withdrawn = "(退)" in str(withdrawn_flag)
                 
+                # アクティブメンバーのみ表示フィルター
+                if active_only and is_withdrawn:
+                    print(f"[DEBUG] FILTERED OUT (退会者): {member_number} - {original_name}")
+                    # 退会者はスキップしますが、後で階層再構築時にその子メンバーは親を繋ぎ直します
+                    continue
+                
                 display_name = f"（退会者）{original_name}" if is_withdrawn and original_name else original_name
+                
+                # 📋 称号の統合処理（シンプル統合）
+                historical_title = (row.get(' 資格名', '') or row.get('資格名', '')).strip()  # 組織図CSV由来
+                current_title = historical_title  # デフォルトは組織図の称号
+                
+                # デバッグ: 処理中の会員番号
+                if count < 5:  # 最初の5件のみデバッグ
+                    print(f"[DEBUG] 処理中会員: {member_number}, 元のタイトル: '{historical_title}'")
+                
+                # 会員管理データから現在称号を取得
+                if member_number in member_integration_service.member_details_cache:
+                    member_details = member_integration_service.member_details_cache[member_number]
+                    # デバッグ出力
+                    if member_number in ['00000000000', '00000000400', '00000069700']:
+                        print(f"[DEBUG] {member_number} 詳細: {member_details}")
+                    
+                    # 会員管理CSVの「称号」フィールドから取得
+                    current_title_from_csv = None
+                    for field in ['title', '称号', '資格名']:
+                        if field in member_details and member_details[field]:
+                            current_title_from_csv = member_details[field].strip()
+                            if member_number in ['00000000000', '00000000400', '00000069700']:
+                                print(f"[DEBUG] フィールド {field}: {current_title_from_csv}")
+                            break
+                    
+                    if current_title_from_csv:
+                        current_title = current_title_from_csv
+                    else:
+                        current_title = '称号なし'
+                else:
+                    # キャッシュにない場合のデバッグ
+                    if member_number == '00000069700':
+                        print(f"[DEBUG] {member_number} はキャッシュに見つかりません")
+                
+                # シンプル統合ロジック: アクティブは現在称号、退会者は過去最高称号
+                display_title = current_title if not is_withdrawn else historical_title
+                
+                # デバッグ: 称号統合結果
+                print(f"[DEBUG] {member_number} 称号統合結果:")
+                print(f"  historical_title: '{historical_title}'")
+                print(f"  current_title: '{current_title}'")
+                print(f"  display_title: '{display_title}'")
+                print(f"  is_withdrawn: {is_withdrawn}")
                 
                 org_node = {
                     'id': f"{level}-{member_number}",
                     'member_number': member_number,
                     'name': display_name,
-                    'title': (row.get(' 資格名', '') or row.get('資格名', '')).strip(),
+                    'title': display_title,
+                    'historical_title': historical_title,  # 報酬計算用
+                    'current_title': current_title,        # 統合情報
+                    'display_title': display_title,        # 表示用統合称号
                     'level': level,
                     'hierarchy_path': (row.get(' 組織階層', '') or row.get('組織階層', '')).strip(),
                     'registration_date': (row.get(' 登録日', '') or row.get('登録日', '')).strip(),
@@ -296,6 +387,14 @@ def get_organization_tree(
                     'raw_hierarchy': level,
                     'member_status': "WITHDRAWN" if is_withdrawn else "ACTIVE"
                 }
+                
+                # デバッグ: org_node作成直後の確認
+                if member_number == '00000000000':
+                    print(f"[DEBUG] org_node作成直後:")
+                    print(f"  current_title: '{org_node['current_title']}'")
+                    print(f"  historical_title: '{org_node['historical_title']}'")
+                    print(f"  display_title: '{org_node['display_title']}'")
+                
                 limited_org_data.append(org_node)
                 
                 count += 1
@@ -335,9 +434,9 @@ def get_organization_tree(
             if item['level'] == 0:
                 root_nodes.append(node)
         
-        # バイナリツリー階層パターンに基づく親子関係構築（改良版）
-        def find_parent_by_position(current_index, current_level, all_data):
-            """CSVの位置と階層レベルに基づいて親を特定する"""
+        # バイナリツリー階層パターンに基づく親子関係構築（アクティブフィルター対応版）
+        def find_parent_by_position(current_index, current_level, all_data, filtered_data_map):
+            """CSVの位置と階層レベルに基づいて親を特定する（アクティブフィルター時は退会者をスキップ）"""
             import re
             
             if current_level <= 1:
@@ -346,17 +445,19 @@ def get_organization_tree(
                     # レベル1の親は必ずレベル0（ルート）
                     for i in range(current_index - 1, -1, -1):
                         if all_data[i]['level'] == 0:
-                            return all_data[i]['hierarchy_path']
+                            # フィルター済みデータに存在するかチェック
+                            if all_data[i]['hierarchy_path'] in filtered_data_map:
+                                return all_data[i]['hierarchy_path']
                 return None
             
-            # レベル2以上の場合、CSVで上方向に検索して直近の親レベルを見つける
-            parent_level = current_level - 1
-            
-            # 現在位置から上に向かって親レベルを検索
-            for i in range(current_index - 1, -1, -1):
-                item = all_data[i]
-                if item['level'] == parent_level:
-                    return item['hierarchy_path']
+            # レベル2以上の場合、アクティブな親を探す（退会者をスキップ）
+            # 現在位置から上に向かって、フィルター済みデータに存在する最も近い上位レベルを検索
+            for target_level in range(current_level - 1, -1, -1):
+                for i in range(current_index - 1, -1, -1):
+                    item = all_data[i]
+                    if (item['level'] == target_level and 
+                        item['hierarchy_path'] in filtered_data_map):
+                        return item['hierarchy_path']
             
             return None
         
@@ -365,20 +466,57 @@ def get_organization_tree(
         for item in limited_org_data:
             hierarchy_to_member[item['hierarchy_path']] = item
         
-        # 元の順序を保持して親子関係を構築（CSVの順序が重要）
-        for i, item in enumerate(limited_org_data):
-            current_node = node_map[item['id']]
-            current_level = item['level']
+        # アクティブフィルター時は簡易的な親子関係構築
+        if active_only:
+            # レベルごとにメンバーをグループ化
+            members_by_level = {}
+            for item in limited_org_data:
+                level = item['level']
+                if level not in members_by_level:
+                    members_by_level[level] = []
+                members_by_level[level].append(item)
             
-            if current_level > 0:
-                # CSVの位置に基づいて親を特定（改良版）
-                parent_hierarchy = find_parent_by_position(i, current_level, limited_org_data)
+            # 各メンバーについて、より上位のレベルから最も近い親を見つける
+            for item in limited_org_data:
+                current_node = node_map[item['id']]
+                current_level = item['level']
                 
-                if parent_hierarchy and parent_hierarchy in hierarchy_to_member:
-                    parent_item = hierarchy_to_member[parent_hierarchy]
-                    if parent_item['id'] in node_map:
-                        parent_node = node_map[parent_item['id']]
-                        parent_node.children.append(current_node)
+                if current_level > 0:
+                    # 上位レベルから最も近い親を探す
+                    parent_found = False
+                    for parent_level in range(current_level - 1, -1, -1):
+                        if parent_level in members_by_level:
+                            # アクティブフィルター時はシンプルに：最も近い上位レベルのメンバーを親とする
+                            # （退会者がスキップされているため、厳密な階層パスマッチングは不要）
+                            if members_by_level[parent_level]:
+                                # デバッグ: 親子関係の確認
+                                potential_parent = members_by_level[parent_level][0]  # 簡易的に最初のメンバーを親とする
+                                parent_node = node_map[potential_parent['id']]
+                                parent_node.children.append(current_node)
+                                print(f"[DEBUG] 親子関係構築: {potential_parent['name']} (Level {parent_level}) <- {item['name']} (Level {current_level})")
+                                parent_found = True
+                                break
+                    
+                    # 親が見つからない場合、レベル0のルートに直接接続
+                    if not parent_found and 0 in members_by_level:
+                        root_node = node_map[members_by_level[0][0]['id']]
+                        root_node.children.append(current_node)
+                        print(f"[DEBUG] ルート直接接続: {members_by_level[0][0]['name']} (Level 0) <- {item['name']} (Level {current_level})")
+        else:
+            # 通常表示時の親子関係構築（元のロジック）
+            for i, item in enumerate(limited_org_data):
+                current_node = node_map[item['id']]
+                current_level = item['level']
+                
+                if current_level > 0:
+                    # CSVの位置に基づいて親を特定
+                    parent_hierarchy = find_parent_by_position(i, current_level, limited_org_data, set(hierarchy_to_member.keys()))
+                    
+                    if parent_hierarchy and parent_hierarchy in hierarchy_to_member:
+                        parent_item = hierarchy_to_member[parent_hierarchy]
+                        if parent_item['id'] in node_map:
+                            parent_node = node_map[parent_item['id']]
+                            parent_node.children.append(current_node)
         
         # 特定メンバーにフォーカスする場合
         if member_id:
