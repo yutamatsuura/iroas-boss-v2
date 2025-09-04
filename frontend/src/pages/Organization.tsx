@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   Paper,
@@ -70,7 +70,9 @@ const Organization: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [selectedMember, setSelectedMember] = useState<OrganizationNode | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [filterLevel, setFilterLevel] = useState<number | ''>('');
+  const [filteredData, setFilteredData] = useState<OrganizationNode[]>([]);
   const [showSponsorDialog, setShowSponsorDialog] = useState(false);
   const [breadcrumbs, setBreadcrumbs] = useState<OrganizationNode[]>([]);
   const [viewMode, setViewMode] = useState<'tree' | 'table'>('tree');
@@ -87,6 +89,32 @@ const Organization: React.FC = () => {
   useEffect(() => {
     fetchOrganizationData(currentMaxLevel, focusedMember?.member_number);
   }, [showActiveOnly]);
+
+  // デバウンス処理
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 150); // 150ms待機（高速化）
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // 検索とフィルターの処理
+  useEffect(() => {
+    let filtered = [...organizationData];
+    
+    // 検索フィルター（会員番号のみ、高速化）
+    if (debouncedSearchQuery) {
+      filtered = filterNodesBySearch(filtered, debouncedSearchQuery);
+    }
+    
+    // レベルフィルター
+    if (filterLevel !== '') {
+      filtered = filterNodesByLevel(filtered, filterLevel);
+    }
+    
+    setFilteredData(filtered);
+  }, [organizationData, debouncedSearchQuery, filterLevel]);
 
   // データ取得
   const fetchOrganizationData = async (maxLevel = currentMaxLevel, focusMember?: string) => {
@@ -108,7 +136,12 @@ const Organization: React.FC = () => {
 
   // さらに深い階層を表示
   const loadMoreLevels = async () => {
-    const newMaxLevel = currentMaxLevel + 5;
+    // 最大55階層に制限
+    const newMaxLevel = Math.min(currentMaxLevel + 5, 55);
+    if (newMaxLevel === currentMaxLevel) {
+      // すでに最大階層に達している
+      return;
+    }
     setCurrentMaxLevel(newMaxLevel);
     await fetchOrganizationData(newMaxLevel, focusedMember?.member_number);
   };
@@ -133,6 +166,131 @@ const Organization: React.FC = () => {
     setOrganizationData(updatedData);
   };
 
+  // 検索フィルター関数（会員番号のみ）
+  const filterNodesBySearch = (nodes: OrganizationNode[], query: string): OrganizationNode[] => {
+    const result: OrganizationNode[] = [];
+    
+    nodes.forEach(node => {
+      // 会員番号のみで検索（パフォーマンス向上）
+      const matchesSearch = node.member_number.includes(query);
+      
+      const filteredChildren = filterNodesBySearch(node.children, query);
+      
+      if (matchesSearch || filteredChildren.length > 0) {
+        result.push({
+          ...node,
+          children: filteredChildren,
+          is_expanded: true // 検索結果を表示するため展開
+        });
+      }
+    });
+    
+    return result;
+  };
+
+  // レベルフィルター関数
+  const filterNodesByLevel = (nodes: OrganizationNode[], level: number): OrganizationNode[] => {
+    const result: OrganizationNode[] = [];
+    
+    nodes.forEach(node => {
+      const matchesLevel = 
+        level === 5 ? node.level >= 5 : node.level === level;
+      
+      const filteredChildren = filterNodesByLevel(node.children, level);
+      
+      if (matchesLevel || filteredChildren.length > 0) {
+        result.push({
+          ...node,
+          children: filteredChildren,
+          is_expanded: true // フィルター結果を表示するため展開
+        });
+      }
+    });
+    
+    return result;
+  };
+
+  // 現在表示中のデータをCSV出力
+  const downloadCurrentView = () => {
+    const currentData = debouncedSearchQuery || filterLevel !== '' ? filteredData : organizationData;
+    const flattenedData = flattenNodes(currentData);
+    
+    // CSVヘッダー
+    const headers = [
+      '会員番号',
+      '氏名',
+      '称号',
+      'ステータス',
+      'レベル',
+      '左売上',
+      '右売上',
+      '合計売上',
+      '登録日'
+    ];
+    
+    // CSVデータ行
+    const rows = flattenedData.map(node => [
+      node.member_number,
+      node.name,
+      node.title,
+      node.status === 'ACTIVE' ? 'アクティブ' : '退会済',
+      node.level.toString(),
+      node.left_sales.toLocaleString(),
+      node.right_sales.toLocaleString(),
+      (node.left_sales + node.right_sales).toLocaleString(),
+      node.registration_date
+    ]);
+    
+    // CSV文字列を生成
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
+    
+    // ファイル名を生成
+    let filename = '組織図データ';
+    if (focusedMember) {
+      filename += `_${focusedMember.name}配下`;
+    }
+    if (showActiveOnly) {
+      filename += '_アクティブのみ';
+    }
+    if (debouncedSearchQuery) {
+      filename += `_検索_${debouncedSearchQuery}`;
+    }
+    if (filterLevel !== '') {
+      filename += `_レベル${filterLevel}`;
+    }
+    filename += `_${new Date().toISOString().split('T')[0]}.csv`;
+    
+    // ダウンロード実行
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // ノードツリーをフラット配列に変換
+  const flattenNodes = (nodes: OrganizationNode[]): OrganizationNode[] => {
+    const result: OrganizationNode[] = [];
+    
+    const flatten = (nodeList: OrganizationNode[]) => {
+      nodeList.forEach(node => {
+        result.push(node);
+        if (node.children.length > 0) {
+          flatten(node.children);
+        }
+      });
+    };
+    
+    flatten(nodes);
+    return result;
+  };
+
   // メンバー詳細表示
   const handleMemberDetail = async (member: OrganizationNode) => {
     try {
@@ -155,11 +313,11 @@ const Organization: React.FC = () => {
     setShowSponsorDialog(true);
   };
 
-  // 組織ツリーコンポーネント
+  // 組織ツリーコンポーネント（メモ化でパフォーマンス向上）
   const OrganizationTreeNode: React.FC<{ 
     node: OrganizationNode; 
     depth: number;
-  }> = ({ node, depth }) => {
+  }> = React.memo(({ node, depth }) => {
     const getStatusColor = OrganizationService.getStatusColor;
     const getTitleColor = OrganizationService.getTitleColor;
 
@@ -177,12 +335,52 @@ const Organization: React.FC = () => {
       }
     };
 
+    // 称号日本語変換
+    const getTitleLabel = (title: string) => {
+      switch (title.toUpperCase()) {
+        case 'NONE':
+          return '称号なし';
+        case 'COMPANY':
+          return '会社';
+        case 'KNIGHT_DAME':
+          return 'ナイト/デイム';
+        case 'LORD_LADY':
+          return 'ロード/レディ';
+        case 'KING_QUEEN':
+          return 'キング/クイーン';
+        case 'EMPEROR_EMPRESS':
+          return 'エンペラー/エンブレス';
+        case 'WITHDRAWN':
+          return '退会済';
+        default:
+          return title;
+      }
+    };
+
+    // アクティブのみ表示時に、親との階層差を表示
+    const parentLevel = depth > 0 ? depth - 1 : 0;
+    const levelGap = showActiveOnly && depth > 0 ? node.level - parentLevel : 0;
+    
     return (
       <Box key={node.id}>
+        {showActiveOnly && levelGap > 1 && (
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              ml: (node.level - 1) * 3 + 2, 
+              color: 'text.disabled',
+              fontStyle: 'italic',
+              display: 'block',
+              mb: 0.5
+            }}
+          >
+            ... {levelGap - 1}階層スキップ ...
+          </Typography>
+        )}
         <Card
           sx={{
             mb: 1,
-            ml: depth * 3,
+            ml: showActiveOnly ? node.level * 3 : depth * 3,
             border: selectedMember?.id === node.id ? 2 : 1,
             borderColor: selectedMember?.id === node.id ? 'primary.main' : 'divider',
             cursor: 'pointer',
@@ -226,11 +424,19 @@ const Organization: React.FC = () => {
                     size="small"
                     color={getStatusColor(node.status)}
                   />
+                  {node.is_direct && (
+                    <Chip
+                      label="直"
+                      size="small"
+                      color="secondary"
+                      sx={{ fontWeight: 'bold' }}
+                    />
+                  )}
                 </Box>
                 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
                   <Chip
-                    label={node.title}
+                    label={getTitleLabel(node.title)}
                     size="small"
                     sx={{
                       bgcolor: getTitleColor(node.title),
@@ -241,17 +447,7 @@ const Organization: React.FC = () => {
                   <Typography variant="caption" color="text.secondary">
                     レベル {node.level}
                   </Typography>
-                  {(node.left_sales + node.right_sales > 0) && (
-                    <Typography variant="caption" color="text.secondary">
-                      売上: ¥{(node.left_sales + node.right_sales).toLocaleString()}
-                    </Typography>
-                  )}
-                  {node.is_direct && (
-                    <Chip label="直" size="small" color="primary" variant="outlined" />
-                  )}
-                  {node.is_withdrawn && (
-                    <Chip label="退" size="small" color="error" variant="outlined" />
-                  )}
+                  {/* 売上表示は一時的に非表示 */}
                 </Box>
               </Box>
 
@@ -297,7 +493,11 @@ const Organization: React.FC = () => {
         ))}
       </Box>
     );
-  };
+  }, (prevProps, nextProps) => {
+    return prevProps.node.id === nextProps.node.id && 
+           prevProps.node.is_expanded === nextProps.node.is_expanded &&
+           prevProps.depth === nextProps.depth;
+  });
 
   return (
     <Box>
@@ -339,8 +539,9 @@ const Organization: React.FC = () => {
               variant="outlined"
               startIcon={<ExpandMore />}
               onClick={loadMoreLevels}
+              disabled={currentMaxLevel >= 55}
             >
-              さらに表示 (+5階層)
+              {currentMaxLevel >= 55 ? '最大階層に到達' : `さらに表示 (+${Math.min(5, 55 - currentMaxLevel)}階層)`}
             </Button>
           </Box>
         </Box>
@@ -355,7 +556,7 @@ const Organization: React.FC = () => {
               label="会員検索"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="会員番号または氏名"
+              placeholder="会員番号（11桁）"
               InputProps={{
                 startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
               }}
@@ -385,6 +586,7 @@ const Organization: React.FC = () => {
               color={showActiveOnly ? "success" : "inherit"}
               startIcon={<FilterList />}
               onClick={() => setShowActiveOnly(!showActiveOnly)}
+              sx={{ whiteSpace: 'nowrap' }}
             >
               {showActiveOnly ? "全メンバー" : "アクティブのみ"}
             </Button>
@@ -394,9 +596,9 @@ const Organization: React.FC = () => {
               <Button
                 variant="outlined"
                 startIcon={<Download />}
-                onClick={() => OrganizationService.downloadCsv('binary')}
+                onClick={() => downloadCurrentView()}
               >
-                CSV出力
+                現在表示CSV出力
               </Button>
               <IconButton onClick={fetchOrganizationData} color="primary">
                 <Refresh />
@@ -459,7 +661,7 @@ const Organization: React.FC = () => {
           </Box>
         ) : (
           <Box>
-            {organizationData.map(rootNode => (
+            {(debouncedSearchQuery || filterLevel !== '' ? filteredData : organizationData).map(rootNode => (
               <OrganizationTreeNode
                 key={rootNode.id}
                 node={rootNode}

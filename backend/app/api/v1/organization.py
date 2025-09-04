@@ -18,8 +18,8 @@ from app.schemas.organization import OrganizationNode, OrganizationTree, Organiz
 router = APIRouter()
 
 # CSVファイルのパス（絶対パス指定で安全性向上）
-CSV_BINARY_PATH = "/Users/lennon/projects/iroas-boss-v2/csv/2025年8月組織図（バイナリ）.csv"
-CSV_REFERRAL_PATH = "/Users/lennon/projects/iroas-boss-v2/csv/2025年8月組織図（紹介系列）.csv"
+CSV_BINARY_PATH = "/Users/lennon/projects/iroas-boss-v2/archive/csv/2025年8月組織図（バイナリ）.csv"
+CSV_REFERRAL_PATH = "/Users/lennon/projects/iroas-boss-v2/archive/csv/2025年8月組織図（紹介系列）.csv"
 
 # CSVファイルパス設定完了
 
@@ -231,13 +231,88 @@ def get_organization_tree(
 ):
     """組織ツリー取得（段階的表示）"""
     try:
+        import sqlite3
+        
         # 初期表示は軽量化：最大表示制限を緩和
         if max_level is None:
             max_level = 5  # デフォルト5階層で表示
         elif max_level > 100:  # 非常に高い値の場合のみ制限
             max_level = 100
         
-        # 制限付きでCSVデータを読み込み
+        # SQLiteからデータを読み込み
+        db_path = "/Users/lennon/projects/iroas-boss-v2/backend/iroas_boss_v2.db"
+        conn = sqlite3.connect(db_path, timeout=5)
+        conn.row_factory = sqlite3.Row
+        
+        # 組織データを結合して取得（parent_idも含める）
+        query = """
+        SELECT 
+            op.id as position_id, op.parent_id, op.level, op.hierarchy_path, op.left_count, op.right_count, 
+            op.left_sales, op.right_sales, op.position_type,
+            CASE 
+                WHEN op.member_id IS NOT NULL THEN m.member_number
+                WHEN op.withdrawn_id IS NOT NULL THEN w.original_member_number
+            END as member_number,
+            CASE 
+                WHEN op.member_id IS NOT NULL THEN m.name
+                WHEN op.withdrawn_id IS NOT NULL THEN w.original_name
+            END as name,
+            CASE 
+                WHEN op.member_id IS NOT NULL THEN m.title
+                ELSE 'WITHDRAWN'
+            END as title,
+            CASE 
+                WHEN op.member_id IS NOT NULL THEN m.status
+                ELSE 'WITHDRAWN'
+            END as status,
+            CASE 
+                WHEN op.member_id IS NOT NULL THEN m.registration_date
+                ELSE NULL
+            END as registration_date,
+            CASE 
+                WHEN op.withdrawn_id IS NOT NULL THEN 1
+                ELSE 0
+            END as is_withdrawn,
+            op.position_type = 'DIRECT' as is_direct
+        FROM organization_positions op
+        LEFT JOIN members m ON op.member_id = m.id
+        LEFT JOIN withdrawals w ON op.withdrawn_id = w.id
+        WHERE 1=1
+        """
+        
+        params = []
+        
+        # レベル制限を適用
+        if member_id:
+            # フォーカス時の処理：特定メンバーとその配下を取得
+            normalized_member_id = member_id.zfill(11)
+            focus_query = """
+            SELECT op.level 
+            FROM organization_positions op
+            LEFT JOIN members m ON op.member_id = m.id
+            LEFT JOIN withdrawals w ON op.withdrawn_id = w.id
+            WHERE (m.member_number = ? OR w.original_member_number = ?)
+            LIMIT 1
+            """
+            focus_row = conn.execute(focus_query, (normalized_member_id, normalized_member_id)).fetchone()
+            if focus_row:
+                focus_member_level = focus_row['level']
+                # フォーカスメンバー自身と指定した階層数分の配下を取得
+                query += " AND op.level BETWEEN ? AND ?"
+                params.extend([focus_member_level, focus_member_level + max_level])
+        else:
+            query += " AND op.level <= ?"
+            params.append(max_level)
+        
+        # アクティブメンバーのみフィルター
+        # active_onlyの場合も、親子関係構築のため全データが必要だが、
+        # パフォーマンスのため、別途処理する
+        
+        query += " ORDER BY op.level, op.hierarchy_path"
+        
+        rows = conn.execute(query, params).fetchall()
+        
+        limited_org_data = []
         limited_org_data = []
         focus_member_level = None
         

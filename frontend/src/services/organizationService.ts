@@ -281,14 +281,41 @@ export class OrganizationService {
    * 称号の色を取得
    */
   static getTitleColor(title: string): string {
-    if (title.includes('エンペラー') || title.includes('エンブレス')) return '#8b5cf6';
-    if (title.includes('キング') || title.includes('クイーン')) return '#3b82f6';
-    if (title.includes('ロード') || title.includes('レディ')) return '#10b981';
-    if (title.includes('ナイト') || title.includes('デイム')) return '#f59e0b';
+    // 英語と日本語の両方に対応
+    const upperTitle = title.toUpperCase();
+    
+    // エンペラー/エンブレス - 紫
+    if (upperTitle.includes('EMPEROR') || upperTitle.includes('EMPRESS') || 
+        title.includes('エンペラー') || title.includes('エンブレス')) return '#8b5cf6';
+    
+    // キング/クイーン - 青
+    if (upperTitle.includes('KING') || upperTitle.includes('QUEEN') || 
+        title.includes('キング') || title.includes('クイーン')) return '#3b82f6';
+    
+    // ロード/レディ - 緑
+    if (upperTitle.includes('LORD') || upperTitle.includes('LADY') || 
+        title.includes('ロード') || title.includes('レディ')) return '#10b981';
+    
+    // ナイト/デイム - オレンジ
+    if (upperTitle.includes('KNIGHT') || upperTitle.includes('DAME') || 
+        title.includes('ナイト') || title.includes('デイム')) return '#f59e0b';
+    
+    // 会社 - 赤
+    if (upperTitle.includes('COMPANY') || title.includes('会社')) return '#ef4444';
+    
+    // エリアディレクター - 紫
     if (title.includes('エリアディレクター')) return '#8b5cf6';
+    
+    // ディレクター - 青
     if (title.includes('ディレクター')) return '#3b82f6';
+    
+    // マネージャー - 緑
     if (title.includes('マネージャー')) return '#10b981';
+    
+    // リーダー - オレンジ
     if (title.includes('リーダー')) return '#f59e0b';
+    
+    // デフォルト（称号なし等）- グレー
     return '#6b7280';
   }
 }

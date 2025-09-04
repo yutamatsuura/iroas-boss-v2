@@ -134,6 +134,10 @@ app.add_middleware(AuditLoggingMiddleware)
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["認証"])
 app.include_router(security.router, prefix="/api/v1/security", tags=["セキュリティ"])
 
+# 統合システムルーター追加
+from app.api.v1 import unified
+app.include_router(unified.router, prefix="/api/v1", tags=["統合システム"])
+
 # ルートエンドポイント
 @app.get("/")
 async def root():

@@ -29,6 +29,7 @@ const statusDisplayMap: Record<string, string> = {
 
 const titleDisplayMap: Record<string, string> = {
   'NONE': '称号なし',
+  'COMPANY': '会社',
   'KNIGHT_DAME': 'ナイト/デイム',
   'LORD_LADY': 'ロード/レディ',
   'KING_QUEEN': 'キング/クイーン',

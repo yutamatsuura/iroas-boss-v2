@@ -6,7 +6,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
  */
 
 // APIベースURL設定（開発環境）
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 // Axiosインスタンス作成
 const apiClient: AxiosInstance = axios.create({
@@ -31,7 +31,12 @@ apiClient.interceptors.request.use(
     
     // デバッグ用ログ（開発環境のみ）
     if (import.meta.env.DEV) {
-      console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, config.data);
+      console.log(`[API Request] ${config.method?.toUpperCase()}`);
+      console.log('URL:', config.url);
+      console.log('BaseURL:', config.baseURL);
+      console.log('Full URL:', `${config.baseURL}${config.url}`);
+      console.log('Params:', config.params);
+      console.log('Data:', config.data);
     }
     
     return config;
@@ -87,7 +92,13 @@ apiClient.interceptors.response.use(
       }
     } else if (error.request) {
       // リクエストは送信されたが、レスポンスがない場合
-      console.error('[API Error] No response received:', error.request);
+      console.error('[API Error] No response received:');
+      console.error('URL:', error.config?.url);
+      console.error('BaseURL:', error.config?.baseURL);  
+      console.error('Full URL:', error.config ? `${error.config.baseURL}${error.config.url}` : 'unknown');
+      console.error('Method:', error.config?.method);
+      console.error('Request:', error.request);
+      console.error('Error:', error);
     } else {
       // リクエストの設定中にエラーが発生した場合
       console.error('[API Error] Request setup error:', error.message);
